@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hermes Agent Office</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="office">
+  <header id="topbar">
+    <div class="brand">
+      <span class="brand-mark" id="brand-mark">🏢</span>
+      <span class="brand-name">Hermes Agent Office</span>
+      <span class="badge source-badge" id="source-badge">demo</span>
+    </div>
+    <div class="topbar-center">
+      <span class="live-dot" id="live-dot"></span>
+      <span id="live-label">connecting…</span>
+    </div>
+    <nav class="theme-switcher" id="theme-switcher" title="Pick an office">
+      <button data-theme-name="office" class="theme-btn active">Office</button>
+      <button data-theme-name="nous" class="theme-btn">Nous</button>
+      <button data-theme-name="dunder" class="theme-btn">Dunder Mifflin</button>
+    </nav>
+  </header>
+
+  <main id="layout">
+    <aside id="roster" class="panel">
+      <div class="panel-head">
+        <h2>Agents</h2>
+        <span class="panel-sub" id="roster-count">0</span>
+      </div>
+      <ul id="roster-list"></ul>
+      <div class="panel-foot" id="roster-empty">No agents in the office yet — they're on their way.</div>
+    </aside>
+
+    <section id="stage-wrap">
+      <canvas id="stage"></canvas>
+      <div id="stage-hint" class="stage-hint hidden">
+        <div class="hint-card">
+          <div class="hint-title">The office is open</div>
+          <div class="hint-text">Agents will walk in as they start working.
+            In demo mode a synthetic day plays out; point the server at your
+            Hermes <code>state.db</code> to watch your real agents.</div>
+        </div>
+      </div>
+    </section>
+
+    <aside id="metrics" class="panel">
+      <div class="panel-head"><h2>Today</h2></div>
+      <div class="metric">
+        <div class="metric-value" id="m-working">0</div>
+        <div class="metric-label">agents working</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" id="m-input">0</div>
+        <div class="metric-label">input tokens</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" id="m-output">0</div>
+        <div class="metric-label">output tokens</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" id="m-deliveries">0</div>
+        <div class="metric-label">deliveries</div>
+      </div>
+      <div class="panel-foot" id="mode-note">Demo feed — run with <code>--db</code> for live agents.</div>
+    </aside>
+  </main>
+
+  <button id="mailbox-btn" class="mailbox-btn" title="Office Mail">
+    <span class="mailbox-icon">📬</span>
+    <span class="mailbox-label">Office Mail</span>
+    <span class="mailbox-count" id="mailbox-count" hidden>0</span>
+  </button>
+
+  <div id="toasts"></div>
+
+  <!-- Agent modal -->
+  <div id="agent-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card agent-card">
+      <button class="modal-close" data-close aria-label="Close">✕</button>
+      <div class="agent-head">
+        <div class="agent-avatar" id="am-avatar"></div>
+        <div class="agent-id">
+          <div class="agent-name" id="am-name"></div>
+          <div class="agent-meta" id="am-meta"></div>
+        </div>
+        <span class="status-pill" id="am-status"></span>
+      </div>
+      <div class="agent-now" id="am-now"></div>
+      <div class="agent-task" id="am-task"></div>
+      <div class="agent-tokens">
+        <div class="token-box"><span class="token-num" id="am-tin">0</span><span class="token-lbl">input</span></div>
+        <div class="token-box"><span class="token-num" id="am-tout">0</span><span class="token-lbl">output</span></div>
+      </div>
+      <div class="agent-section-title">Activity plan</div>
+      <ol class="steps" id="am-steps"></ol>
+      <div class="agent-section-title">Loadout</div>
+      <div class="chips" id="am-tools"></div>
+    </div>
+  </div>
+
+  <!-- Mailbox modal -->
+  <div id="mail-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card mail-card">
+      <button class="modal-close" data-close aria-label="Close">✕</button>
+      <h2 class="mail-title">📬 Office Mail</h2>
+      <ul id="mail-list" class="mail-list"></ul>
+      <div id="mail-empty" class="mail-empty hidden">Nothing here yet — when an agent finishes a task, the work lands in your mailbox.</div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
