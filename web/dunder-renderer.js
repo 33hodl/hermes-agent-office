@@ -138,7 +138,8 @@ const DunderRenderer = {
     for (const st of eng.theme.stations) {
       const c = this.map(eng, st.x, st.y);
       const back = st.y < 3.5;
-      const ly = back ? c.y - eng.s(44) : c.y - eng.s(26);
+      const front = st.type === 'reception' || st.type === 'mail';
+      const ly = back ? c.y - eng.s(44) : (front ? c.y - eng.s(40) : c.y - eng.s(26));
       const tw = ctx.measureText(st.label.toUpperCase()).width;
       ctx.fillStyle = 'rgba(245,240,224,0.92)';
       eng.roundRectPath(ctx, c.x - tw / 2 - eng.s(6), ly - eng.s(11), tw + eng.s(12), eng.s(15), eng.s(7));
@@ -149,13 +150,13 @@ const DunderRenderer = {
       ctx.fillStyle = '#4a3b26';
       ctx.fillText(st.label.toUpperCase(), c.x, ly);
     }
-    // hover name tag
-    if (eng.hoverAgent) {
-      const a = eng.agents.get(eng.hoverAgent);
-      if (a) {
+    // name tags (always on for the cast, plus hover for the rest)
+    const tags = [...eng.agents.values()];
+    for (const a of tags) {
+      if (eng.hoverAgent === a.id || tags.length <= 8) {
         const c = this.map(eng, a.x, a.y);
         const tw = ctx.measureText(a.name).width;
-        ctx.fillStyle = 'rgba(40,30,20,0.88)';
+        ctx.fillStyle = 'rgba(40,30,20,0.9)';
         eng.roundRectPath(ctx, c.x - tw / 2 - eng.s(6), c.y - eng.s(74), tw + eng.s(12), eng.s(16), eng.s(8));
         ctx.fill();
         ctx.fillStyle = '#fdfaf0';
@@ -166,7 +167,7 @@ const DunderRenderer = {
     for (const a of eng.agents.values()) {
       if (a.bubble.text && now < a.bubble.until) {
         const c = this.map(eng, a.x, a.y);
-        this.drawBubble(eng, ctx, a, c.x, c.y - eng.s(88));
+        this.drawBubble(eng, ctx, a, c.x, c.y - eng.s(96));
       }
     }
     ctx.textAlign = 'left';
@@ -183,7 +184,7 @@ const DunderRenderer = {
 
     const y = c.y - 4 * s + bob;
     const color = a.color;
-    const dark = shade(color, -45);
+    const dark = shade(color, -60); // deep ink tone
 
     // shadow
     ctx.fillStyle = 'rgba(50,40,25,0.22)';
@@ -194,7 +195,7 @@ const DunderRenderer = {
     // legs (cartoon, with walk swing)
     const swing = a.moving ? Math.sin(a.walkPhase) * 4 * s : 0;
     ctx.strokeStyle = dark;
-    ctx.lineWidth = 3.4 * s;
+    ctx.lineWidth = Math.max(3.6 * s, 2);
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(c.x - 6 * s, y + 2 * s);
@@ -205,27 +206,33 @@ const DunderRenderer = {
     ctx.lineTo(c.x + 6 * s - swing, y + 12 * s);
     ctx.stroke();
 
+    const ink = Math.max(2.6 * s, 2.0);   // bold cartoon ink outline
     // body (rounded, outlined)
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.roundRect(c.x - 11 * s, y - 12 * s, 22 * s, 17 * s, 8 * s);
     ctx.fill();
     ctx.strokeStyle = dark;
-    ctx.lineWidth = 2 * s;
+    ctx.lineWidth = ink;
     ctx.stroke();
+    // flat two-tone shading band (bottom of body)
+    ctx.fillStyle = shade(color, -18);
+    ctx.beginPath();
+    ctx.roundRect(c.x - 11 * s, y + 1 * s, 22 * s, 4 * s, 6 * s);
+    ctx.fill();
     // belly
     ctx.fillStyle = shade(color, 28);
     ctx.beginPath();
     ctx.ellipse(c.x, y - 4 * s, 7 * s, 6 * s, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = dark;
-    ctx.lineWidth = 1.2 * s;
+    ctx.lineWidth = ink * 0.7;
     ctx.stroke();
 
     // arms (swing while walking)
     const armSwing = a.moving ? Math.sin(a.walkPhase + Math.PI) * 3.5 * s : 0;
     ctx.strokeStyle = dark;
-    ctx.lineWidth = 2.8 * s;
+    ctx.lineWidth = Math.max(3 * s, 1.6);
     ctx.beginPath();
     ctx.moveTo(c.x - 10 * s, y - 8 * s);
     ctx.lineTo(c.x - 13 * s, y - 3 * s + armSwing);
@@ -242,7 +249,7 @@ const DunderRenderer = {
     ctx.arc(c.x, hy, 10.5 * s, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = dark;
-    ctx.lineWidth = 2 * s;
+    ctx.lineWidth = ink;
     ctx.stroke();
     // hair swoosh (some)
     if (hashCode(a.name) % 2 === 0) {

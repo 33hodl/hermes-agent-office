@@ -642,6 +642,8 @@ function boot() {
 
   fetchState();
   connect();
+  // periodic state heal: re-sync metrics/deliveries in case SSE ever drops
+  setInterval(() => fetchState(), 30000);
 }
 
 function openMailbox() {

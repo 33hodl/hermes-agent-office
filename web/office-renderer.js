@@ -82,6 +82,17 @@ const OfficeRenderer = {
       const c = this.map(eng, 0, i), d = this.map(eng, GRID, i);
       g.beginPath(); g.moveTo(c.x, c.y); g.lineTo(d.x, d.y); g.stroke();
     }
+    // soft ground mat under the whole office (anchors the diorama)
+    const matC = this.map(eng, GRID / 2, GRID / 2);
+    const mat = g.createRadialGradient(matC.x, matC.y + eng.s(40), eng.s(20), matC.x, matC.y + eng.s(40), eng.s(430));
+    mat.addColorStop(0, 'rgba(120,95,60,0.10)');
+    mat.addColorStop(0.7, 'rgba(120,95,60,0.05)');
+    mat.addColorStop(1, 'rgba(120,95,60,0)');
+    g.fillStyle = mat;
+    g.beginPath();
+    g.ellipse(matC.x, matC.y + eng.s(40), eng.s(430), eng.s(220), 0, 0, Math.PI * 2);
+    g.fill();
+
     // warm center light pool
     const ctr = this.map(eng, GRID / 2, GRID / 2);
     const grad = g.createRadialGradient(ctr.x, ctr.y, 10, ctr.x, ctr.y, eng.s(330));
@@ -222,12 +233,21 @@ const OfficeRenderer = {
         this.drawChair(eng, g, ax, ay, p.chair);
       }
     }
-    // lounge
+    // lounge + water cooler
     const lg = eng.theme.stations.find(s => s.type === 'lounge');
     if (lg) {
       eng.ellipseIso(lg.x, lg.y, 1.4, 0.8, p.rugGreen);
       this.isoBox(eng, g, lg.x - 0.7, lg.y - 0.35, lg.x + 0.1, lg.y + 0.35, 18, p.rugGreen, p.rugGreen, shade(p.rugGreen, -30));
       this.isoBox(eng, g, lg.x + 0.55, lg.y - 0.2, lg.x + 0.95, lg.y + 0.2, 12, p.woodTop, p.wood, p.woodDark);
+      // water cooler
+      const wc = this.map(eng, lg.x - 1.0, lg.y + 0.5);
+      g.fillStyle = '#e9edf2';
+      g.beginPath(); g.arc(wc.x, wc.y - eng.s(16), eng.s(7), 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#b8c2cc'; g.lineWidth = eng.s(1.5); g.stroke();
+      g.fillStyle = '#cfd8e0';
+      g.fillRect(wc.x - eng.s(6), wc.y - eng.s(12), eng.s(12), eng.s(12));
+      g.fillStyle = '#8fa3b5';
+      g.fillRect(wc.x - eng.s(2), wc.y - eng.s(22), eng.s(4), eng.s(6));
     }
     // tools bench
     const tl = eng.theme.stations.find(s => s.type === 'tools');
@@ -348,7 +368,7 @@ const OfficeRenderer = {
     ctx.roundRect(-10 * scale, -4 * scale, 20 * scale, 16 * scale, 8 * scale);
     ctx.fill();
     ctx.strokeStyle = shade(a.color, -30);
-    ctx.lineWidth = 1.2 * scale;
+    ctx.lineWidth = Math.max(1.3 * scale, 1.1);
     ctx.stroke();
 
     // head

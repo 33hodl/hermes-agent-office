@@ -135,7 +135,8 @@ class HermesDBSource:
                 """SELECT m.id, m.session_id, m.role, m.content, m.tool_calls,
                           m.tool_name, m.timestamp, m.reasoning_content,
                           s.source, s.display_name, s.model, s.title,
-                          s.started_at, s.end_reason, s.message_count
+                          s.started_at, s.end_reason, s.message_count,
+                          s.input_tokens, s.output_tokens
                    FROM messages m
                    JOIN sessions s ON s.id = m.session_id
                    WHERE m.id > ? AND m.active = 1
@@ -160,8 +161,28 @@ class HermesDBSource:
                 "display_name": display_name or "",
                 "model": model or "",
                 "title": title or "",
+                "tokens": {"input": 0, "output": 0},
             }
         return self._session_meta[session_id]
+
+    def _token_delta(self, info: Dict[str, Any], row) -> Dict[str, int]:
+        """Return token counts not yet emitted for this session, then mark them."""
+        # SELECT order: ..., message_count(14), input_tokens(15), output_tokens(16)
+        try:
+            total_in = row[15] or 0
+            total_out = row[16] or 0
+        except Exception:
+            return {}
+        prev = info["tokens"]
+        if total_in <= prev["input"] and total_out <= prev["output"]:
+            return {}
+        delta = {
+            "input": max(0, total_in - prev["input"]),
+            "output": max(0, total_out - prev["output"]),
+        }
+        prev["input"] = total_in
+        prev["output"] = total_out
+        return delta
 
     def _agent_name(self, session_id: str, info: Dict[str, Any]) -> str:
         return info["display_name"] or info["title"] or _role_label(info["source"])
@@ -169,9 +190,10 @@ class HermesDBSource:
     def _handle_row(self, row) -> None:
         (msg_id, session_id, role, content, tool_calls, tool_name,
          timestamp, reasoning, source, display_name, model, title,
-         started_at, end_reason, message_count) = row
+         started_at, end_reason, message_count, in_tok, out_tok) = row
 
         info = self._session_info(session_id, source, display_name, model, title)
+        toks = self._token_delta(info, row)
         name = self._agent_name(session_id, info)
         role_label = _role_label(info["source"])
 
@@ -185,7 +207,7 @@ class HermesDBSource:
             excerpt = content.strip().replace("\n", " ")[:140]
             self._emit(type="status", agent=name, session=session_id,
                        role=role_label, text=f"New task: {excerpt}",
-                       task=excerpt)
+                       task=excerpt, tokens=toks)
 
         # assistant message with tool calls = agent at the tools station
         elif role == "assistant" and tool_calls:
@@ -203,7 +225,8 @@ class HermesDBSource:
                     args = args[:160]
                 self._emit(type="tool_call", agent=name, session=session_id,
                            role=role_label, tool=tname,
-                           text=f"{tool_label(tname)}", args=str(args)[:160])
+                           text=f"{tool_label(tname)}", args=str(args)[:160],
+                           tokens=toks)
 
         # tool result row
         elif role == "tool":
@@ -219,7 +242,8 @@ class HermesDBSource:
             self._emit(type="delivery", agent=name, session=session_id,
                        role=role_label, title=(info["title"] or "Deliverable"),
                        content=content[:MAX_CONTENT],
-                       text=snippet or "Delivered a response")
+                       text=snippet or "Delivered a response",
+                       tokens=toks)
 
         # session ended -> agent heads home
         if end_reason:

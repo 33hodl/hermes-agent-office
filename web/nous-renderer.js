@@ -343,11 +343,21 @@ const NousRenderer = {
     // labels: mono HUD style
     ctx.textAlign = 'center';
     ctx.font = `600 ${eng.s(10)}px ${monoFont()}`;
+    const usedLabels = [];
     for (const st of eng.theme.stations) {
       const c = this.map(eng, st.x, st.y);
       const back = st.y < 3;
-      const ly = back ? c.y - eng.s(10) : c.y + eng.s(8);
+      let ly = back ? c.y - eng.s(10) : c.y + eng.s(8);
       const tw = ctx.measureText(st.label.toUpperCase()).width;
+      // collision-resolve against already-placed labels
+      for (let tries = 0; tries < 6; tries++) {
+        const clash = usedLabels.some(u =>
+          Math.abs(c.x - u.x) < (u.w + tw) / 2 + eng.s(8) &&
+          Math.abs(ly - u.y) < eng.s(20));
+        if (!clash) break;
+        ly += eng.s(18);
+      }
+      usedLabels.push({ x: c.x, y: ly, w: tw });
       ctx.fillStyle = 'rgba(6,8,16,0.75)';
       eng.roundRectPath(ctx, c.x - tw / 2 - eng.s(7), ly, tw + eng.s(14), eng.s(15), eng.s(7));
       ctx.fill();
@@ -372,11 +382,21 @@ const NousRenderer = {
         ctx.fillText(a.name, c.x, c.y - eng.s(46));
       }
     }
-    // speech bubbles
+    // speech bubbles (collision-resolved so they never overlap)
+    const used = [];
     for (const a of eng.agents.values()) {
       if (a.bubble.text && now < a.bubble.until) {
         const c = this.map(eng, a.x, a.y);
-        this.drawBubble(eng, ctx, a, c.x, c.y - eng.s(64));
+        let bx = c.x, by = c.y - eng.s(70);
+        // push down if colliding with an earlier bubble
+        for (let tries = 0; tries < 5; tries++) {
+          const clash = used.some(r => Math.abs(bx - r.x) < (r.w + eng.s(90)) / 2 && Math.abs(by - r.y) < r.h + eng.s(6));
+          if (!clash) break;
+          by += eng.s(26);
+        }
+        const w = this.measureBubble(eng, a);
+        used.push({ x: bx, y: by, w, h: eng.s(22) });
+        this.drawBubble(eng, ctx, a, bx, by, w);
       }
     }
     ctx.textAlign = 'left';
@@ -436,12 +456,23 @@ const NousRenderer = {
     }
   },
 
-  drawBubble(eng, ctx, a, x, y) {
+  measureBubble(eng, a) {
     const s = eng.scale;
     const text = a.bubble.text;
-    ctx.font = `600 ${11 * s}px ${monoFont()}`;
-    const tw = ctx.measureText(text).width;
-    const w = Math.min(tw + 18 * s, 150 * s);
+    const c = eng.renderer.ctx || document.createElement('canvas').getContext('2d');
+    c.font = `600 ${11 * s}px ${monoFont()}`;
+    const tw = c.measureText(text).width;
+    return Math.min(tw + 18 * s, 150 * s);
+  },
+
+  drawBubble(eng, ctx, a, x, y, w) {
+    const s = eng.scale;
+    const text = a.bubble.text;
+    if (!w) {
+      ctx.font = `600 ${11 * s}px ${monoFont()}`;
+      const tw = ctx.measureText(text).width;
+      w = Math.min(tw + 18 * s, 150 * s);
+    }
     const h = 22 * s;
     const bx = clamp(x - w / 2, 4 * s, eng.cssW - w - 4 * s);
     const by = y - h - 6 * s;
