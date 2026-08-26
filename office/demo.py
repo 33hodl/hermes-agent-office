@@ -54,6 +54,8 @@ class DemoSource:
         self.seed = seed
         self.interval = interval
         self._rng = random.Random(seed)
+        self._name_pool: List[str] = []
+        self._name_pool_i = 0
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self._events: List[Dict[str, Any]] = []
@@ -102,8 +104,22 @@ class DemoSource:
     def _tokens(self, n_in: int, n_out: int) -> Dict[str, int]:
         return {"input": n_in, "output": n_out}
 
+    def set_name_pool(self, names: List[str]) -> None:
+        self._name_pool = [n for n in names if n]
+        # evict current agents so fresh ones spawn with the new names
+        for name in list(self._agent_state.keys()):
+            self._emit(type="agent_leave", agent=name,
+                       session=self._agent_state[name].get("session", ""),
+                       role=self._agent_state[name].get("role", ""),
+                       text="Reassigned to a new role")
+        self._agent_state.clear()
+
     def _new_agent(self) -> str:
-        name = self._rng.choice(AGENT_NAMES)
+        if self._name_pool:
+            name = self._name_pool[self._name_pool_i % len(self._name_pool)]
+            self._name_pool_i += 1
+        else:
+            name = self._rng.choice(AGENT_NAMES)
         role = self._rng.choice(DEMO_ROLES)
         session = f"demo-{name.lower()}-{self._rng.randint(100, 999)}"
         self._agent_state[name] = {"role": role, "session": session,
@@ -125,6 +141,12 @@ class DemoSource:
             if self._rng.random() < 0.12 and len(self._agent_state) < 8:
                 self._new_agent()
                 time.sleep(self.interval * 2)
+            if not self._agent_state:
+                # everyone left (name pool swap) — refill with new names
+                for _ in range(4):
+                    self._new_agent()
+                    time.sleep(self.interval * 2)
+                continue
 
             name = self._rng.choice(list(self._agent_state.keys()))
             st = self._agent_state[name]

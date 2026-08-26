@@ -1,0 +1,258 @@
+/* Hermes Agent Office — engine core.
+ * Shared canvas management, agent client state, particles, glow sprites,
+ * easing, input. Renderers (office/nous/dunder) plug in via setRenderer().
+ */
+'use strict';
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+
+function hashCode(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+function shade(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = clamp(Math.round(((n >> 16) & 255) + amt), 0, 255);
+  const g = clamp(Math.round(((n >> 8) & 255) + amt), 0, 255);
+  const b = clamp(Math.round((n & 255) + amt), 0, 255);
+  return `rgb(${r},${g},${b})`;
+}
+function monoFont() {
+  return 'ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace';
+}
+function fmtNum(n) {
+  if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+  return String(n);
+}
+
+/* ---------- glow sprite cache: pre-rendered radial gradients ---------- */
+const glowCache = new Map();
+function glowSprite(color, size) {
+  const key = color + '@' + size;
+  let c = glowCache.get(key);
+  if (c) return c;
+  c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  grad.addColorStop(0, color);
+  grad.addColorStop(0.35, color.replace(/[\d.]+\)$/, '0.35)'));
+  grad.addColorStop(1, color.replace(/[\d.]+\)$/, '0)'));
+  g.fillStyle = grad;
+  g.fillRect(0, 0, size, size);
+  if (glowCache.size > 64) glowCache.clear();
+  return c;
+}
+function glowColor(hex, alpha) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+}
+
+/* ---------- particles (pooled) ---------- */
+class Particles {
+  constructor() { this.list = []; }
+  spawn(opts) {
+    if (this.list.length > 400) this.list.shift();
+    this.list.push(Object.assign({
+      x: 0, y: 0, vx: 0, vy: 0, life: 1, maxLife: 1, r: 3, color: '#fff',
+      grav: 0, drag: 0, glow: false, sprite: null,
+    }, opts));
+  }
+  update(dt) {
+    for (let i = this.list.length - 1; i >= 0; i--) {
+      const p = this.list[i];
+      p.life -= dt;
+      if (p.life <= 0) { this.list.splice(i, 1); continue; }
+      p.vy += (p.grav || 0) * dt;
+      p.vx *= (1 - (p.drag || 0) * dt);
+      p.vy *= (1 - (p.drag || 0) * dt);
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+    }
+  }
+  draw(ctx, s) {
+    for (const p of this.list) {
+      const a = clamp(p.life / p.maxLife, 0, 1);
+      if (p.glow) {
+        const spr = glowSprite(p.color, p.r * 6 * s);
+        ctx.globalAlpha = a * 0.7;
+        ctx.drawImage(spr, p.x - (p.r * 3 * s), p.y - (p.r * 3 * s), p.r * 6 * s, p.r * 6 * s);
+        ctx.globalAlpha = 1;
+      }
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * s, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+
+/* ---------- engine ---------- */
+class OfficeEngine {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.cssW = 0; this.cssH = 0;
+    this.dpr = 1;
+    this.scale = 1;
+    this.ox = 0; this.oy = 0;
+    this.theme = null;          // current theme config
+    this.renderer = null;       // active renderer
+    this.agents = new Map();    // id -> client agent
+    this.particles = new Particles();
+    this.hoverAgent = null;
+    this._deskCounter = 0;
+    this.staticLayer = null;    // pre-rendered scene (renderer-built)
+    this.fps = 0;
+    this._fpsFrames = 0;
+    this._fpsTime = 0;
+    const ro = new ResizeObserver(() => this.resize());
+    ro.observe(canvas.parentElement);
+    this.resize();
+  }
+
+  setTheme(theme) {
+    this.theme = theme;
+    this.resize();
+  }
+
+  setRenderer(r) {
+    this.renderer = r;
+    if (r) r.init && r.init(this);
+    this.resize();
+  }
+
+  resize() {
+    const wrap = this.canvas.parentElement;
+    this.dpr = Math.min(window.devicePixelRatio || 1, 1.75);
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    this.canvas.width = Math.max(2, Math.round(w * this.dpr));
+    this.canvas.height = Math.max(2, Math.round(h * this.dpr));
+    this.canvas.style.width = w + 'px';
+    this.canvas.style.height = h + 'px';
+    this.cssW = w; this.cssH = h;
+    this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    if (this.renderer) this.renderer.resize(this);
+  }
+
+  s(v) { return v * this.scale; }
+
+  frame(dt) {
+    // fps meter
+    this._fpsFrames++;
+    this._fpsTime += dt;
+    if (this._fpsTime >= 1) { this.fps = Math.round(this._fpsFrames / this._fpsTime); this._fpsFrames = 0; this._fpsTime = 0; }
+    this.updateAgents(dt);
+    this.particles.update(dt);
+    if (this.renderer) {
+      this.renderer.draw(this, this.ctx, dt);
+    }
+  }
+
+  /* ---------- agents ---------- */
+
+  addAgent(a) {
+    const ent = this.theme.entrance;
+    const desks = this.theme.desks || [];
+    const deskIdx = this._deskCounter++ % Math.max(desks.length, 1);
+    const [hx, hy] = desks.length ? desks[deskIdx] : [ent.x, ent.y];
+    const ca = {
+      ...a,
+      x: ent.x, y: ent.y,
+      tx: ent.x, ty: ent.y,
+      home: { x: hx, y: hy + 0.55 },
+      slot: deskIdx % 4,
+      moving: false,
+      walkPhase: Math.random() * 10,
+      facing: 1,
+      bubble: { text: null, icon: null, until: 0 },
+      toss: 0,
+      blinkAt: performance.now() / 1000 + 2 + Math.random() * 4,
+      arrivedAt: performance.now() / 1000,
+      vx: 0, vy: 0,        // smoothed velocity (for squash & stretch)
+      pendingDelivery: null,
+      leaving: false,
+    };
+    if (this.renderer && this.renderer.onAgentAdded) this.renderer.onAgentAdded(ca);
+    this.agents.set(a.id, ca);
+    this.goTo(ca, ent.x, ent.y + 0.5);
+    this.bubble(ca, 'Arrived', null, 3);
+    return ca;
+  }
+
+  removeAgent(id) {
+    const a = this.agents.get(id);
+    if (!a) return;
+    const ent = this.theme.entrance;
+    this.goTo(a, ent.x, ent.y + 0.5);
+    a.leaving = true;
+  }
+
+  goTo(a, x, y) { a.tx = x; a.ty = y; }
+
+  bubble(a, text, icon, seconds = 4) {
+    a.bubble = { text, icon: icon || null, until: performance.now() / 1000 + seconds };
+  }
+
+  stationOf(type) {
+    return (this.theme.stations || []).find(st => st.type === type);
+  }
+
+  updateAgents(dt) {
+    for (const a of this.agents.values()) {
+      const speed = 1.9; // grid cells / sec
+      const dx = a.tx - a.x, dy = a.ty - a.y;
+      const dist = Math.hypot(dx, dy);
+      // ease near target for natural arrival
+      const step = Math.min(dist, speed * dt * (dist < 0.4 ? 1.6 : 1));
+      if (dist > 0.01) {
+        a.x += (dx / dist) * step;
+        a.y += (dy / dist) * step;
+        a.moving = true;
+        a.walkPhase += dt * 7.5;
+        if (Math.abs(dx) > 0.02) a.facing = dx > 0 ? 1 : -1;
+      } else {
+        a.moving = false;
+      }
+      // smoothed velocity for squash/stretch
+      const vx = (dx / Math.max(dist, 0.001)) * (dist > 0.01 ? Math.min(dist, 0.2) / 0.2 : 0);
+      a.vx = lerp(a.vx, a.moving ? Math.sign(dx) * Math.min(1, dist * 3) : 0, 0.2);
+      a.vy = lerp(a.vy, a.moving ? Math.sign(dy) * Math.min(1, dist * 3) : 0, 0.2);
+      if (a.toss > 0) a.toss -= dt;
+      if (a.leaving && !a.moving) this.agents.delete(a.id);
+    }
+  }
+
+  /* ---------- input ---------- */
+
+  hitTest(px, py) {
+    if (!this.renderer || !this.renderer.hitTest) return null;
+    return this.renderer.hitTest(this, px, py);
+  }
+
+  /* ---------- shared draw helpers ---------- */
+
+  ellipseIso(x, y, rx, ry, fill, dy = 0) {
+    const { ctx } = this;
+    const c = this.renderer ? this.renderer.map(this, x, y) : { x: this.ox, y: this.oy };
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.ellipse(c.x, c.y + this.s(dy), this.s(rx * 28), this.s(ry * 14), 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  roundRectPath(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+}

@@ -1,38 +1,46 @@
 # Hermes Agent Office 🏢
 
-Watch your Hermes agents work in a live virtual office. No more staring at
-chat bubbles — your agents walk in, sit at their desks, run to the tool room
-when they call a tool, and drop finished work in your mailbox. Three office
-themes included.
+Watch your Hermes agents work in a **live virtual office** — or give them an
+office of your own design. Your agents walk in, sit at their desks, run to the
+tool room when they call a tool, and drop finished work in your mailbox.
 
 ![demo](docs/screenshots/demo.gif)
 
 ![themes](docs/screenshots/montage.png)
 
-## What it is
+## ✨ Three built-in offices + create your own
 
-Hermes Agent runs everywhere — Telegram, Discord, cron, CLI, desktop — and
-its sessions are stored locally in `state.db`. Hermes Agent Office reads that
-store (read-only, zero writes) and turns the activity into an animated,
-isometric office:
+| Theme | Vibe |
+|-------|------|
+| **Office** | the viral "agents in an office" look — cozy pastel diorama, sunlit window, dust motes |
+| **Nous** | a holographic data plane — AI-painted data center, neon perspective grid, glowing agent orbs with light trails |
+| **Dunder Mifflin** | the Scranton branch, painted in flat 2D sitcom style — reception, bullpen, conference room, break room |
 
-- agents arrive when sessions start, leave when they end
-- status bubbles: *thinking…*, *searching the web*, *editing files*, *waiting at desk*
-- every tool call sends the agent to the tool room
-- finished work lands in your mailbox as a clickable delivery
-- live token counters and per-agent activity plans
+### Create your own office (any movie, show or game)
 
-![live](docs/screenshots/live.png)
+Hit **✨ Create an office** and pick a franchise — Batman, Star Wars, Studio
+Ghibli, Spider-Man, Avatar, Cyberpunk, The Office… or start from scratch:
+
+- we **paint a backdrop** with the Nous Portal image model (e.g. a Gotham
+  rooftop with the bat-signal) — ~$0.08, billed to your own Nous credits
+- the office is **staffed with the franchise's characters** (Batman, Robin,
+  Catwoman, Joker…) — they walk in, work, and deliver to your mailbox
+- **tune everything**: office name, agent names, accent & floor colors,
+  dark mode, light trails
+- custom offices are **saved, switchable anytime, exportable as JSON** and
+  importable on any other machine
+
+![custom-batman](docs/screenshots/custom-batman.png)
 
 ## Quick start
 
 No dependencies. Python 3.10+ and a browser.
 
 ```bash
-# demo mode — synthetic agents, zero setup, try it instantly
+# demo mode — synthetic agents, zero setup
 python3 -m office.server --demo
 
-# live mode — watch your real Hermes agents
+# live mode — watch your real Hermes agents (reads state.db, never writes)
 python3 -m office.server --db ~/.hermes/state.db
 ```
 
@@ -46,28 +54,20 @@ Then open http://127.0.0.1:8741
 | `--seed N` | deterministic demo feed |
 | `--poll S` | db poll interval (default 1.0s) |
 
-## Themes
-
-| Theme | Vibe |
-|-------|------|
-| **Office** | the viral "agents in an office" look — cozy pastel diorama |
-| **Nous** | premium dark, cobalt grid, terminal energy |
-| **Dunder Mifflin** | the Scranton branch — reception, bullpen, conference room, break room, warehouse |
-
-Switch themes in-app (top right); the choice persists.
-
 ## How it works
 
 ```
-Hermes state.db ──▶ office/hermes_db.py ──▶ normalized events ──▶ web canvas
-Demo generator  ──▶ office/demo.py    ──▶ (same event schema)
+Hermes state.db ──▶ office/hermes_db.py ──▶ normalized events ──▶ canvas engine
+Demo generator  ──▶ office/demo.py     ──▶ (same event schema)
+Creator panel   ──▶ office/art.py      ──▶ painted backdrops (Nous Portal)
 ```
 
 - `office/events.py` — event schema + agent/delivery store
 - `office/hermes_db.py` — read-only SQLite poller of the Hermes session store
-- `office/demo.py` — scripted demo feed
+- `office/demo.py` — scripted demo feed (custom names supported)
+- `office/art.py` — backdrop generation via the Nous Portal image model
 - `office/server.py` — stdlib HTTP server + SSE stream (no dependencies)
-- `web/` — canvas frontend, zero build step, local-first, no telemetry
+- `web/` — canvas frontend with three renderers (isometric, holographic, 2D cartoon), zero build step, local-first, no telemetry
 
 The event schema is tiny and documented in `office/events.py` — any tool
 (plugins, cron, gateway hooks) can emit the same events later; see

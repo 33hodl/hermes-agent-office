@@ -1,0 +1,64 @@
+<!-- Hermes Agent Office — Custom Office Creator panel -->
+<div id="creator-btn-wrap">
+  <button id="creator-btn" class="creator-btn" title="Create your own office">✨ Create an office</button>
+</div>
+
+<div id="creator-modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-card creator-card">
+    <button class="modal-close" data-close aria-label="Close">✕</button>
+    <h2 class="creator-title">✨ Create your own office</h2>
+    <p class="creator-sub">Pick a movie, show or game — we'll paint the backdrop, staff the office, and match the colors. Then tweak it however you like.</p>
+
+    <div class="creator-field">
+      <label for="creator-franchise">Franchise / vibe</label>
+      <select id="creator-franchise"></select>
+    </div>
+
+    <div class="creator-field">
+      <label for="creator-name">Office name</label>
+      <input id="creator-name" type="text" placeholder="Gotham City Office" maxlength="40">
+    </div>
+
+    <div class="creator-field">
+      <label for="creator-names">Agent names <span class="dim">(comma separated)</span></label>
+      <input id="creator-names" type="text" placeholder="Batman, Robin, Catwoman, Joker…" maxlength="200">
+    </div>
+
+    <div class="creator-row">
+      <div class="creator-field">
+        <label for="creator-accent">Accent color</label>
+        <input id="creator-accent" type="color" value="#d96f4a">
+      </div>
+      <div class="creator-field">
+        <label for="creator-floor">Floor color</label>
+        <input id="creator-floor" type="color" value="#e8dcc3">
+      </div>
+      <div class="creator-field">
+        <label for="creator-dark">Dark theme</label>
+        <select id="creator-dark">
+          <option value="auto">Auto</option>
+          <option value="1">Dark</option>
+          <option value="0">Light</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="creator-field">
+      <label class="check-row"><input type="checkbox" id="creator-backdrop" checked> Generate painted backdrop <span class="dim">(uses your Nous Portal credits, ~$0.08)</span></label>
+    </div>
+    <div class="creator-field">
+      <label class="check-row"><input type="checkbox" id="creator-trails"> Glowing light trails</label>
+    </div>
+
+    <div class="creator-actions">
+      <button id="creator-build" class="creator-build">Build my office 🏢</button>
+      <button id="creator-export" class="creator-ghost" title="Download as JSON">Export</button>
+      <button id="creator-import" class="creator-ghost" title="Import a JSON theme">Import</button>
+      <input type="file" id="creator-import-file" accept=".json,application/json" hidden>
+    </div>
+    <div id="creator-status" class="creator-status"></div>
+
+    <div class="creator-tip">Tip: custom offices are saved in your browser. Use Export to share them with friends or import them into another machine.</div>
+  </div>
+</div>

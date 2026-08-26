@@ -17,11 +17,14 @@
       <span class="live-dot" id="live-dot"></span>
       <span id="live-label">connecting…</span>
     </div>
-    <nav class="theme-switcher" id="theme-switcher" title="Pick an office">
+    <div class="topbar-right">
+      <button id="mute-btn" class="mute-btn" title="Toggle sound">🔊</button>
+      <nav class="theme-switcher" id="theme-switcher" title="Pick an office">
       <button data-theme-name="office" class="theme-btn active">Office</button>
       <button data-theme-name="nous" class="theme-btn">Nous</button>
       <button data-theme-name="dunder" class="theme-btn">Dunder Mifflin</button>
-    </nav>
+      </nav>
+    </div>
   </header>
 
   <main id="layout">
@@ -76,6 +79,9 @@
 
   <div id="toasts"></div>
 
+  <!-- Custom office creator -->
+  <div id="creator-root"></div>
+
   <!-- Agent modal -->
   <div id="agent-modal" class="modal hidden" role="dialog" aria-modal="true">
     <div class="modal-backdrop" data-close></div>
@@ -113,6 +119,13 @@
     </div>
   </div>
 
+  <script src="custom.js"></script>
+  <script src="creator-html.js"></script>
+  <script src="engine.js"></script>
+  <script src="office-renderer.js"></script>
+  <script src="nous-renderer.js"></script>
+  <script src="dunder-renderer.js"></script>
+  <script src="creator.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -255,3 +255,77 @@ body {
   #metrics { display: none; }
   .brand-name { display: none; }
 }
+
+/* ---------- per-theme typography accents ---------- */
+body[data-theme="nous"] {
+  --sans: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+}
+body[data-theme="nous"] .brand-name { letter-spacing: .12em; text-transform: uppercase; font-size: 13px; }
+body[data-theme="nous"] .panel-head h2 { color: var(--accent); letter-spacing: .18em; }
+body[data-theme="nous"] #topbar { border-bottom-color: #26263a; }
+body[data-theme="nous"] .mailbox-btn { border-color: #3a3a5a; }
+
+body[data-theme="dunder"] {
+  --sans: "Trebuchet MS", "Segoe UI", Roboto, sans-serif;
+}
+body[data-theme="dunder"] .brand-name { font-weight: 800; letter-spacing: .02em; }
+body[data-theme="dunder"] .panel-head h2 { font-family: var(--mono); letter-spacing: .14em; }
+body[data-theme="dunder"] #topbar { border-bottom: 3px solid #a3764a; }
+body[data-theme="dunder"] .roster-item { border-radius: 6px; border-width: 2px; }
+body[data-theme="dunder"] .mailbox-btn { border-radius: 10px; border-width: 2px; border-color: #a3764a; }
+
+body[data-theme="office"] .brand-name { font-weight: 800; }
+
+/* ---------- creator panel ---------- */
+#creator-btn-wrap { position: fixed; left: 18px; bottom: 18px; z-index: 40; }
+.creator-btn {
+  background: var(--panel-bg); color: var(--text);
+  border: 1px solid var(--panel-border); border-radius: 999px;
+  padding: 10px 16px; cursor: pointer; box-shadow: var(--shadow);
+  font-size: 13px; font-weight: 700; font-family: var(--sans);
+  transition: transform .12s ease, border-color .15s ease;
+}
+.creator-btn:hover { transform: translateY(-2px); border-color: var(--accent); }
+.creator-card { width: min(560px, calc(100vw - 40px)); }
+.creator-title { font-size: 19px; margin-bottom: 4px; }
+.creator-sub { font-size: 12.5px; color: var(--text-dim); margin-bottom: 16px; line-height: 1.5; }
+.creator-field { margin-bottom: 12px; }
+.creator-field label { display: block; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-dim); margin-bottom: 5px; }
+.creator-field .dim { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--text-dim); }
+.creator-field input[type="text"], .creator-field select {
+  width: 100%; padding: 9px 11px; border-radius: 10px;
+  border: 1px solid var(--panel-border); background: var(--bg); color: var(--text);
+  font-size: 13.5px; font-family: var(--sans); outline: none;
+}
+.creator-field input[type="text"]:focus, .creator-field select:focus { border-color: var(--accent); }
+.creator-field input[type="color"] { width: 100%; height: 38px; border: 1px solid var(--panel-border); border-radius: 10px; background: var(--bg); cursor: pointer; padding: 3px; }
+.creator-row { display: flex; gap: 10px; }
+.creator-row .creator-field { flex: 1; }
+.check-row { display: flex !important; align-items: center; gap: 8px; font-size: 13px !important; text-transform: none !important; letter-spacing: 0 !important; color: var(--text) !important; font-weight: 600 !important; cursor: pointer; }
+.check-row input { width: 16px; height: 16px; accent-color: var(--accent); }
+.creator-actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+.creator-build {
+  background: var(--accent); color: #fff; border: 0; border-radius: 12px;
+  padding: 11px 20px; font-size: 14px; font-weight: 800; cursor: pointer;
+  font-family: var(--sans); transition: transform .12s ease, opacity .15s ease;
+}
+.creator-build:hover { transform: translateY(-1px); }
+.creator-build:disabled { opacity: .55; cursor: wait; }
+.creator-ghost {
+  background: var(--panel-bg); color: var(--text); border: 1px solid var(--panel-border);
+  border-radius: 12px; padding: 11px 16px; font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: var(--sans);
+}
+.creator-ghost:hover { border-color: var(--accent); }
+.creator-status { margin-top: 12px; font-size: 12.5px; color: var(--text-dim); min-height: 16px; line-height: 1.5; }
+.creator-status.err { color: var(--bad); }
+.creator-tip { margin-top: 14px; font-size: 11.5px; color: var(--text-dim); border-top: 1px dashed var(--panel-border); padding-top: 10px; line-height: 1.5; }
+
+/* topbar right cluster */
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+.mute-btn {
+  border: 0; background: transparent; color: var(--text-dim); font-size: 15px;
+  cursor: pointer; padding: 4px 6px; border-radius: 8px; line-height: 1;
+}
+.mute-btn:hover { color: var(--text); background: var(--accent-soft); }

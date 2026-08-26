@@ -27,6 +27,7 @@ from . import __version__
 from .demo import DemoSource
 from .events import OfficeStore
 from .hermes_db import HermesDBSource
+from . import art as office_art
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web")
 
@@ -141,6 +142,33 @@ class OfficeHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path.split("?")[0]
+        if path == "/api/art":
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                payload = json.loads(self.rfile.read(length) or b"{}")
+            except Exception:
+                payload = {}
+            prompt = (payload.get("prompt") or "").strip()[:1500]
+            if not prompt:
+                return self._json({"ok": False, "error": "empty prompt"}, 400)
+            out = office_art.cache_path_for(prompt)
+            if os.path.exists(out):
+                return self._json({"ok": True, "url": office_art.cache_url_for(prompt), "cached": True})
+            ok, msg = office_art.generate_backdrop(prompt, out)
+            if ok:
+                return self._json({"ok": True, "url": office_art.cache_url_for(prompt), "cached": False})
+            return self._json({"ok": False, "error": msg}, 502)
+        if path == "/api/demo/names":
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                payload = json.loads(self.rfile.read(length) or b"{}")
+            except Exception:
+                payload = {}
+            names = [str(n).strip()[:24] for n in payload.get("names", []) if str(n).strip()]
+            src = self.app.source
+            if hasattr(src, "set_name_pool"):
+                src.set_name_pool(names)
+            return self._json({"ok": True, "names": len(names)})
         if path == "/api/deliveries/read":
             try:
                 length = int(self.headers.get("Content-Length", 0))
