@@ -193,7 +193,7 @@ class OfficeEngine {
   /* ---------- agents ---------- */
 
   addAgent(a) {
-    const ent = this.theme.entrance;
+    const ent = this.theme.entrance || (this.theme.stations || []).find(s => s.type === 'entrance') || { x: 1, y: 6 };
     // home = nearest desk among ALL desk-ish stations (covers office + dunder layouts)
     const desks = (this.theme.desks || []).length
       ? this.theme.desks
