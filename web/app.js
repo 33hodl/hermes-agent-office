@@ -886,7 +886,8 @@ function boot() {
   restoreCustomThemes();
   const saved = localStorage.getItem('office-theme') || 'office';
   applyTheme(saved);
-  Sound.muted = localStorage.getItem('office-muted') === '1';
+  // sound OFF by default (per user: no generic audio); user opts in via 🔊
+  Sound.muted = localStorage.getItem('office-muted') !== '0';
   // autoplay policy: start the soundscape on first click/key anywhere
   const kick = () => {
     if (!Sound.muted) Sound.startAmbient();
