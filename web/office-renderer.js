@@ -42,7 +42,7 @@ const OfficeRenderer = {
 
   resize(eng) {
     const fit = Math.min(eng.cssW / 640, eng.cssH / 380);
-    eng.scale = clamp(fit, 0.45, 1.7);
+    eng.scale = clamp(fit, 0.45, 1.7) * (eng.zoom || 1);
     eng.ox = eng.cssW / 2;
     eng.oy = eng.cssH / 2 + 24;
     this._buildStatic(eng);

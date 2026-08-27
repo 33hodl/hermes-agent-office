@@ -39,7 +39,7 @@ const NousRenderer = {
   },
 
   resize(eng) {
-    eng.scale = clamp(Math.min(eng.cssW / 900, eng.cssH / 640), 0.55, 1.4);
+    eng.scale = clamp(Math.min(eng.cssW / 900, eng.cssH / 640) * (eng.zoom || 1), 0.55, 1.4);
     eng.ox = eng.cssW / 2;
     eng.oy = eng.cssH * 0.44;
     this._buildStatic(eng);
@@ -366,7 +366,7 @@ const NousRenderer = {
         ly += eng.s(18);
       }
       usedLabels.push({ x: c.x, y: ly, w: tw });
-      ctx.fillStyle = 'rgba(6,8,16,0.75)';
+      ctx.fillStyle = 'rgba(6,8,16,0.88)';
       eng.roundRectPath(ctx, c.x - tw / 2 - eng.s(7), ly, tw + eng.s(14), eng.s(15), eng.s(7));
       ctx.fill();
       ctx.strokeStyle = 'rgba(110,231,247,0.35)';

@@ -447,10 +447,31 @@ body[data-theme="office"] .brand-name { font-weight: 800; }
   .topbar-task input { width: 200px; }
 }
 @media (max-width: 860px) {
-  #side-left, #side-right { display: none; }
-  .topbar-task { width: 100%; margin: 0 8px; }
-  .topbar-task input { width: 100%; }
-  #stage { min-height: 70vh; }
+  /* single-column mobile layout: office fills everything */
+  #layout {
+    grid-template-columns: 1fr;
+    height: calc(100vh - 48px);
+  }
+  #roster, #metrics { display: none; }  /* hidden on mobile; agents visible in-canvas */
+  #stage-wrap { inset: 48px 0 0 0; }
+  #stage { width: 100%; height: 100%; }
+  .topbar { padding: 6px 8px; gap: 6px; }
+  .brand-name { display: none; }
+  .brand-mark { font-size: 18px; }
+  .topbar-task { margin: 0 4px; }
+  .topbar-task input { width: 100%; font-size: 11px; padding: 5px 8px; }
+  .theme-switcher { display: none; }  /* theme tabs hidden on mobile */
+  #mute-btn { font-size: 14px; }
+  /* welcome modal scales to mobile */
+  .welcome-card { width: calc(100vw - 32px); padding: 18px; }
+  .welcome-title { font-size: 16px; }
+  .welcome-text { font-size: 12px; }
+  /* offline banner fits */
+  .offline-banner { top: 52px; font-size: 10.5px; padding: 6px 10px; max-width: calc(100vw - 20px); }
+  /* tour fits */
+  .tour-card { width: calc(100vw - 32px); bottom: 16px; }
+  /* bottom action buttons stay reachable */
+  .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 20; }
 }
 
 .offline-banner {
@@ -460,3 +481,34 @@ body[data-theme="office"] .brand-name { font-weight: 800; }
   box-shadow: 0 4px 20px rgba(0,0,0,.35); line-height: 1.45;
 }
 .offline-banner code { background: rgba(255,255,255,.12); padding: 1px 5px; border-radius: 5px; font-size: 11px; }
+
+.banner-x {
+  background: transparent; border: 0; color: inherit; cursor: pointer;
+  font-size: 12px; margin-left: 8px; opacity: .7; vertical-align: 1px;
+}
+.banner-x:hover { opacity: 1; }
+
+/* zoom controls */
+.zoom-controls {
+  position: absolute;
+  right: 12px;
+  bottom: 84px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 15;
+}
+.zoom-controls button {
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.12);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: #fff; font-size: 16px; font-weight: 700;
+  cursor: pointer;
+}
+.zoom-controls button:hover { background: rgba(255,255,255,0.22); }
+@media (max-width: 860px) {
+  .zoom-controls { right: 8px; bottom: 76px; }
+}

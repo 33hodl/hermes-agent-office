@@ -106,6 +106,8 @@ class OfficeEngine {
     this.agents = new Map();    // id -> client agent
     this.particles = new Particles();
     this.hoverAgent = null;
+    this.zoom = 1;            // user zoom multiplier
+    this.zoomTarget = 1;
     this._deskCounter = 0;
     this.staticLayer = null;    // pre-rendered scene (renderer-built)
     this.fps = 0;
@@ -139,6 +141,15 @@ class OfficeEngine {
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     if (this.renderer) this.renderer.resize(this);
   }
+
+  setZoom(delta) {
+    this.zoomTarget = clamp(this.zoomTarget + delta, 0.6, 2.2);
+    this.zoom = this.zoomTarget;
+    if (this.renderer) this.renderer.resize(this);
+  }
+  zoomIn() { this.setZoom(0.2); }
+  zoomOut() { this.setZoom(-0.2); }
+  resetZoom() { this.zoomTarget = 1; this.zoom = 1; if (this.renderer) this.renderer.resize(this); }
 
   s(v) { return v * this.scale; }
 

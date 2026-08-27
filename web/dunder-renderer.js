@@ -36,7 +36,7 @@ const DunderRenderer = {
   },
 
   resize(eng) {
-    eng.scale = clamp(Math.min(eng.cssW / 1100, eng.cssH / 700), 0.55, 1.3);
+    eng.scale = clamp(Math.min(eng.cssW / 1100, eng.cssH / 700) * (eng.zoom || 1), 0.55, 1.3);
     eng.ox = 0; eng.oy = 0;
     this._buildStatic(eng);
   },
@@ -140,7 +140,7 @@ const DunderRenderer = {
     // mailbox glow + toss burst handled by particles
     eng.particles.draw(ctx, eng.scale);
 
-    // labels: sitcom caption style
+    // labels: hand-written sticky notes (production polish)
     ctx.textAlign = 'center';
     ctx.font = `800 ${eng.s(11)}px ${monoFont()}`;
     for (const st of eng.theme.stations) {
@@ -149,18 +149,36 @@ const DunderRenderer = {
       const front = st.type === 'reception' || st.type === 'mail';
       const ly = back ? c.y - eng.s(44) : (front ? c.y - eng.s(40) : c.y - eng.s(26));
       const tw = ctx.measureText(st.label.toUpperCase()).width;
-      ctx.fillStyle = 'rgba(245,240,224,0.92)';
-      eng.roundRectPath(ctx, c.x - tw / 2 - eng.s(6), ly - eng.s(11), tw + eng.s(12), eng.s(15), eng.s(7));
+      const rot = (st.id.length % 5 - 2) * 0.02; // tiny per-label rotation, hand-placed feel
+      ctx.save();
+      ctx.translate(c.x, ly - eng.s(5));
+      ctx.rotate(rot);
+      // sticky note: cream paper with folded top shadow
+      ctx.fillStyle = 'rgba(250,244,214,0.95)';
+      eng.roundRectPath(ctx, -tw / 2 - eng.s(6), -eng.s(10), tw + eng.s(12), eng.s(17), eng.s(4));
       ctx.fill();
-      ctx.strokeStyle = 'rgba(90,70,40,0.4)';
+      ctx.fillStyle = 'rgba(200,180,120,0.5)';
+      eng.roundRectPath(ctx, -tw / 2 - eng.s(6), -eng.s(10), tw + eng.s(12), eng.s(4), eng.s(4));
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(120,95,55,0.35)';
       ctx.lineWidth = 1;
       ctx.stroke();
       ctx.fillStyle = '#4a3b26';
-      ctx.fillText(st.label.toUpperCase(), c.x, ly);
+      ctx.fillText(st.label.toUpperCase(), 0, 0);
+      ctx.restore();
     }
     // name tags (always on for the cast, plus hover for the rest)
     const tags = [...eng.agents.values()];
     for (const a of tags) {
+      // grounding shadow so characters sit ON the painted floor
+      const c0 = this.map(eng, a.x, a.y);
+      const sh = ctx.createRadialGradient(c0.x, c0.y + eng.s(4), eng.s(1), c0.x, c0.y + eng.s(4), eng.s(12));
+      sh.addColorStop(0, 'rgba(60,45,25,0.30)');
+      sh.addColorStop(1, 'rgba(60,45,25,0)');
+      ctx.fillStyle = sh;
+      ctx.beginPath();
+      ctx.ellipse(c0.x, c0.y + eng.s(4), eng.s(12), eng.s(3.5), 0, 0, Math.PI * 2);
+      ctx.fill();
       if (eng.hoverAgent === a.id || tags.length <= 8) {
         const c = this.map(eng, a.x, a.y);
         const tw = ctx.measureText(a.name).width;

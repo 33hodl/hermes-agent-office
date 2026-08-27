@@ -57,5 +57,13 @@ function startClientDemo(handleEvent, onStatus) {
   };
 
   CLIENT_DEMO_NAMES.forEach((name, idx) => setTimeout(() => spawn(name), 400 + idx * 3500));
+  // keep the office busy: new waves of tasks forever (continuous workflow)
+  let wave = 0;
+  const loop = setInterval(() => {
+    const name = CLIENT_DEMO_NAMES[wave % CLIENT_DEMO_NAMES.length];
+    wave += 1;
+    spawn(name);
+    if (wave > 40) clearInterval(loop);
+  }, 22000);
   onStatus('demo · in-browser');
 }

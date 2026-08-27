@@ -284,7 +284,9 @@ function startOfflineDemo() {
   const banner = document.createElement('div');
   banner.className = 'offline-banner';
   banner.innerHTML = '<b>Browser demo</b> — no server detected. Agents are simulated in your browser. ' +
-    'Run <code>python3 -m office.server --db ~/.hermes/state.db</code> to watch your real agents.';
+    'Run <code>python3 -m office.server --db ~/.hermes/state.db</code> to watch your real agents. ' +
+    '<button class="banner-x" aria-label="Dismiss">✕</button>';
+  banner.querySelector('.banner-x').addEventListener('click', () => banner.remove());
   document.body.appendChild(banner);
   startClientDemo(handleEvent, (label) => { $('live-label').textContent = label; });
   // seed a few deliveries so the mailbox isn't empty
@@ -845,6 +847,8 @@ function boot() {
   if (welcome && !localStorage.getItem('office-welcome-seen')) {
     welcome.classList.remove('hidden');
     localStorage.setItem('office-welcome-seen', '1');
+    // on mobile the modal eats the screen — auto-dismiss after 5s
+    setTimeout(() => welcome.classList.add('hidden'), 5000);
     document.getElementById('welcome-close').addEventListener('click', () => welcome.classList.add('hidden'));
     document.getElementById('welcome-demo').addEventListener('click', async () => {
       welcome.classList.add('hidden');
@@ -856,6 +860,29 @@ function boot() {
       }
     });
   }
+
+  // zoom controls (buttons + wheel + pinch)
+  const zi = document.getElementById('zoom-in'), zo = document.getElementById('zoom-out'), zr = document.getElementById('zoom-reset');
+  if (zi) zi.addEventListener('click', () => { eng.zoomIn(); });
+  if (zo) zo.addEventListener('click', () => { eng.zoomOut(); });
+  if (zr) zr.addEventListener('click', () => { eng.resetZoom(); });
+  const stageEl = document.getElementById('stage');
+  stageEl.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    eng.setZoom(e.deltaY < 0 ? 0.1 : -0.1);
+  }, { passive: false });
+  let pinchDist = 0;
+  stageEl.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) pinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+  }, { passive: true });
+  stageEl.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+      const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      if (pinchDist > 0) eng.setZoom((d - pinchDist) * 0.01);
+      pinchDist = d;
+    }
+  }, { passive: true });
+  stageEl.addEventListener('touchend', () => { pinchDist = 0; });
 
   // task bar
   const taskInput = $('task-input');
