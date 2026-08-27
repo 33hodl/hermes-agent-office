@@ -1,4 +1,4 @@
-const CACHE = 'office-v2';
+const CACHE = 'office-v3';
 const FILES = ['./', './index.html', './style.css', './engine.js', './app.js',
   './office-renderer.js', './nous-renderer.js', './dunder-renderer.js',
   './custom.js', './creator.js', './creator-html.js', './icon.svg', './manifest.json'];
@@ -13,11 +13,17 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/')) return;
+  // strip cache-busting query for cache lookups
+  const cleanUrl = url.origin + url.pathname;
   e.respondWith(
     fetch(e.request).then((r) => {
-      const copy = r.clone();
-      caches.open(CACHE).then((c) => c.put(e.request, copy));
+      if (r.ok) {
+        const copy = r.clone();
+        caches.open(CACHE).then((c) => c.put(cleanUrl, copy));
+      }
       return r;
-    }).catch(() => caches.match(e.request).then((m) => m || caches.match('./')))
+    }).catch(() =>
+      caches.match(cleanUrl).then((m) => m || caches.match('./'))
+    )
   );
 });
