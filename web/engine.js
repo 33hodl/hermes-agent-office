@@ -146,11 +146,25 @@ class OfficeEngine {
     // idle agents drift back to their home station (no clustering)
     for (const a of this.agents.values()) {
       if ((a.status === 'idle' || a.status === 'entering') && a.home && !a.moving && !a.leaving) {
-        const dx = a.home.x - a.x, dy = a.home.y - a.y;
-        if (Math.hypot(dx, dy) > 0.8) {
+        const hx = a.home.x + (a.homeOffset || 0), hy = a.home.y;
+        const dx = hx - a.x, dy = hy - a.y;
+        if (Math.hypot(dx, dy) > 0.6) {
           a.moving = true;
-          a.tx = a.home.x; a.ty = a.home.y;
+          a.tx = hx; a.ty = hy;
           a.walkPhase = a.walkPhase || Math.random() * 10;
+        }
+      }
+      // nudge overlapping idle agents apart (cheap collision resolution)
+      if (a.status === 'idle' && !a.moving) {
+        for (const b of this.agents.values()) {
+          if (b === a || b.moving || b.status !== 'idle') continue;
+          const dx = a.x - b.x, dy = a.y - b.y;
+          const d = Math.hypot(dx, dy);
+          if (d > 0.01 && d < 0.55) {
+            const push = (0.55 - d) / 2;
+            a.x += (dx / d) * push;
+            a.y += (dy / d) * push;
+          }
         }
       }
     }
@@ -177,10 +191,12 @@ class OfficeEngine {
     const [hx, hy] = desks.length ? desks[deskIdx] : [ent.x, ent.y];
     const ca = {
       ...a,
-      x: ent.x, y: ent.y,
+      x: ent.x + (deskIdx % 3) * 0.7, y: ent.y + (deskIdx % 2) * 0.5,
       tx: ent.x, ty: ent.y,
       home: { x: hx, y: hy + 0.55 },
       slot: deskIdx % 4,
+      // micro-offset so agents on adjacent desks never overlap
+      homeOffset: ((deskIdx * 0.7) % 2) - 0.5,
       moving: false,
       walkPhase: Math.random() * 10,
       facing: 1,
