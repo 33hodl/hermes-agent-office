@@ -106,13 +106,8 @@ class DemoSource:
 
     def set_name_pool(self, names: List[str]) -> None:
         self._name_pool = [n for n in names if n]
-        # evict current agents so fresh ones spawn with the new names
-        for name in list(self._agent_state.keys()):
-            self._emit(type="agent_leave", agent=name,
-                       session=self._agent_state[name].get("session", ""),
-                       role=self._agent_state[name].get("role", ""),
-                       text="Reassigned to a new role")
-        self._agent_state.clear()
+        # Do NOT emit leaves/clear — the client renames agents in place on theme
+        # switch. Clearing here caused every renamed agent to be removed.
 
     def assign_task(self, text: str):
         """User-given task: broadcast, then run it end-to-end on one agent."""

@@ -36,7 +36,8 @@ const DunderRenderer = {
   },
 
   resize(eng) {
-    eng.scale = clamp(Math.min(eng.cssW / 1100, eng.cssH / 700) * (eng.zoom || 1), 0.55, 1.3);
+    const mfit = eng.cssW < 860 ? Math.min(eng.cssW / 340, eng.cssH / 520) : Math.min(eng.cssW / 1100, eng.cssH / 700);
+    eng.scale = clamp(mfit * (eng.zoom || 1), 0.55, 1.3);
     eng.ox = 0; eng.oy = 0;
     this._buildStatic(eng);
   },

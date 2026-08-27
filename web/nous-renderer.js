@@ -39,9 +39,10 @@ const NousRenderer = {
   },
 
   resize(eng) {
-    eng.scale = clamp(Math.min(eng.cssW / 900, eng.cssH / 640) * (eng.zoom || 1), 0.55, 1.4);
+    const mfit = eng.cssW < 860 ? Math.min(eng.cssW / 300, eng.cssH / 500) : Math.min(eng.cssW / 900, eng.cssH / 640);
+    eng.scale = clamp(mfit * (eng.zoom || 1), 0.55, 1.4);
     eng.ox = eng.cssW / 2;
-    eng.oy = eng.cssH * 0.44;
+    eng.oy = eng.cssW < 860 ? eng.cssH * 0.38 : eng.cssH * 0.44;
     this._buildStatic(eng);
   },
 

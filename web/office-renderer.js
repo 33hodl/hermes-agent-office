@@ -42,9 +42,11 @@ const OfficeRenderer = {
 
   resize(eng) {
     const fit = Math.min(eng.cssW / 640, eng.cssH / 380);
-    eng.scale = clamp(fit, 0.45, 1.7) * (eng.zoom || 1);
+    // mobile: much bigger scene so agents are prominent and the room fills the screen
+    const mfit = eng.cssW < 860 ? Math.min(eng.cssW / 250, eng.cssH / 470) : fit;
+    eng.scale = clamp(mfit, 0.45, 1.7) * (eng.zoom || 1);
     eng.ox = eng.cssW / 2;
-    eng.oy = eng.cssH / 2 + 24;
+    eng.oy = eng.cssW < 860 ? eng.cssH * 0.33 : eng.cssH / 2 + 24;
     this._buildStatic(eng);
   },
 
@@ -419,9 +421,10 @@ const OfficeRenderer = {
 
     /* warm spotlight halo behind the character — lifts it off dark floors
        and makes the cast the focal point (per the art-direction spec) */
+    const darkTheme = !!(eng.theme && eng.theme.fx && eng.theme.fx.dark);
     const halo = ctx.createRadialGradient(c.x, c.y - u * 6, u * 2, c.x, c.y - u * 6, u * 26);
-    halo.addColorStop(0, 'rgba(255,236,190,0.30)');
-    halo.addColorStop(0.5, 'rgba(255,236,190,0.12)');
+    halo.addColorStop(0, darkTheme ? 'rgba(255,236,190,0.45)' : 'rgba(255,236,190,0.30)');
+    halo.addColorStop(0.5, darkTheme ? 'rgba(255,236,190,0.20)' : 'rgba(255,236,190,0.12)');
     halo.addColorStop(1, 'rgba(255,236,190,0)');
     ctx.fillStyle = halo;
     ctx.beginPath();

@@ -450,24 +450,66 @@ body[data-theme="office"] .brand-name { font-weight: 800; }
   /* single-column mobile layout: office fills everything */
   #layout {
     grid-template-columns: 1fr;
-    height: calc(100vh - 48px);
+    height: calc(100vh - 96px);
   }
   #roster, #metrics { display: none; }  /* hidden on mobile; agents visible in-canvas */
-  #stage-wrap { inset: 48px 0 0 0; }
+  #stage-wrap { inset: 96px 0 0 0; }
   #stage { width: 100%; height: 100%; }
-  .topbar { padding: 6px 8px; gap: 6px; }
+  /* topbar: 3 compact rows (brand | task | theme tabs) */
+  #topbar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 96px;
+    padding: 6px 8px;
+    gap: 4px 8px;
+    align-content: flex-start;
+  }
+  .brand { flex: 0 0 auto; }
   .brand-name { display: none; }
   .brand-mark { font-size: 18px; }
-  .topbar-task { margin: 0 4px; }
-  .topbar-task input { width: 100%; font-size: 11px; padding: 5px 8px; }
-  .theme-switcher { display: none; }  /* theme tabs hidden on mobile */
+  #topbar .badge { font-size: 9px; padding: 1px 5px; }
+  .topbar-center { order: 2; flex: 1 1 auto; justify-content: flex-start; }
+  .topbar-center #live-label { font-size: 10px; white-space: nowrap; }
+  .topbar-right { order: 3; flex: 0 0 auto; }
+  .topbar-task {
+    order: 4;
+    flex: 1 1 100%;
+    margin: 2px 0 0;
+  }
+  .topbar-task input {
+    width: 100%;
+    font-size: 12px;
+    padding: 7px 10px;
+    border-radius: 10px;
+  }
+  /* theme tabs: always visible, horizontally scrollable */
+  .theme-switcher {
+    order: 5;
+    flex: 1 1 100%;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 2px 0 4px;
+    scrollbar-width: none;
+  }
+  .theme-switcher::-webkit-scrollbar { display: none; }
+  .theme-btn {
+    flex: 0 0 auto;
+    font-size: 11px;
+    padding: 5px 12px;
+    white-space: nowrap;
+  }
   #mute-btn { font-size: 14px; }
+  /* zoom controls bigger + reachable */
+  .zoom-controls { right: 10px; bottom: 88px; }
+  .zoom-controls button { width: 42px; height: 42px; font-size: 20px; }
   /* welcome modal scales to mobile */
   .welcome-card { width: calc(100vw - 32px); padding: 18px; }
   .welcome-title { font-size: 16px; }
   .welcome-text { font-size: 12px; }
   /* offline banner fits */
-  .offline-banner { top: 52px; font-size: 10.5px; padding: 6px 10px; max-width: calc(100vw - 20px); }
+  .offline-banner { top: 100px; font-size: 10.5px; padding: 6px 10px; max-width: calc(100vw - 20px); }
   /* tour fits */
   .tour-card { width: calc(100vw - 32px); bottom: 16px; }
   /* bottom action buttons stay reachable */

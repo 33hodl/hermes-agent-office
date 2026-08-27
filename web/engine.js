@@ -230,6 +230,7 @@ class OfficeEngine {
     const a = this.agents.get(id);
     if (!a) return;
     const ent = this.theme.entrance;
+    if (!ent) { this.agents.delete(id); return; }
     this.goTo(a, ent.x, ent.y + 0.5);
     a.leaving = true;
   }

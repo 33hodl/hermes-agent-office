@@ -10,6 +10,7 @@
 const THEMES = {
   office: {
     name: 'office', brand: '🏢', renderer: 'office', franchiseId: 'office',
+    agentNames: ['Uma', 'Xyla', 'Hazel', 'Dash', 'Pixel', 'Coco', 'Gizmo', 'Yara'],
     ui: { accent: '#d96f4a' },
     floor: { base: '#e8dcc3', alt: '#e1d3b6', grid: 'rgba(120,100,60,0.10)' },
     wall: { back: '#a9b8a0', side: '#9db29a', base: '#8fa08a', frame: '#7c8a76' },
@@ -37,6 +38,7 @@ const THEMES = {
 
   nous: {
     name: 'nous', brand: '◈', renderer: 'nous', franchiseId: 'office',
+    agentNames: ['Uma', 'Xyla', 'Hazel', 'Dash', 'Pixel', 'Coco', 'Gizmo', 'Yara'],
     ui: { accent: '#4d7cf6' },
     floor: { base: '#0d0d15', alt: '#10101a', grid: 'rgba(77,124,246,0.28)' },
     wall: { back: '#13131e', side: '#101019', base: '#1a1a28', frame: '#2a2a42' },
@@ -64,7 +66,9 @@ const THEMES = {
 
   dunder: {
     name: 'dunder', brand: '📎', renderer: 'dunder', franchiseId: 'office',
+    agentNames: ['Michael', 'Dwight', 'Jim', 'Pam', 'Angela', 'Kevin', 'Stanley', 'Phyllis'],
     ui: { accent: '#c07c2b' },
+
     floor: { base: '#8b93a8', alt: '#878fa4', grid: 'rgba(60,60,80,0.14)' },
     wall: { back: '#d9c9a8', side: '#d3c2a0', base: '#b8a683', frame: '#a59370' },
     props: {
@@ -88,6 +92,65 @@ const THEMES = {
     ],
     desks: [[3.2,3.2],[4.2,3.2],[5.2,3.2],[3.2,4.2],[4.2,4.2],[5.2,4.2],[6.0,7.8],[7.0,7.8],[6.0,8.6],[7.0,8.6]],
     plants: [[2.4,6.6],[6.2,0.8],[0.8,2.6],[7.6,8.8]],
+  },
+
+  batman: {
+    name: 'batman', brand: '🦇', renderer: 'office', franchiseId: 'batman',
+    agentNames: ['Batman', 'Robin', 'Catwoman', 'Joker', 'Bane', 'Nightwing', 'Batgirl', 'Alfred'],
+    ui: { accent: '#8a6fd8' },
+    backdrop: '/assets/batman-backdrop.png',
+    floor: { base: '#3a3a46', alt: '#32323e', grid: 'rgba(160,140,255,0.12)' },
+    wall: { back: '#2e2a38', side: '#3a3446', base: '#221e2c', frame: '#4a3a5a' },
+    props: {
+      wood: '#5a4a6a', woodDark: '#3a3046', woodTop: '#6a5a7a',
+      monitor: '#1e2230', monitorScreen: '#7a9ae8', monitorGlow: 'rgba(122,154,232,0.35)',
+      chair: '#3a3446', plant: '#4a6a5a', shelf: '#4a3a5a',
+      pot: '#5a4a6a', plantPot: '#4a3a5a',
+      book: ['#8a6fd8', '#5a8ae8', '#e8c04a', '#e8737c'],
+    },
+    fx: { dark: true },
+    desks: [[2.5,2.5],[4,2.5],[5.5,2.5],[7,3.5],[3,4.5],[5,5.5],[7.5,6.5]],
+    plants: [[0.8,5.5],[5.5,0.8],[7.8,8.5],[0.8,8.5]],
+    stations: [
+      { id: 'entrance', label: 'Batcave Entrance', type: 'entrance', x: 0.5, y: 7.2 },
+      { id: 'mail', label: 'Mail', type: 'mail', x: 1.2, y: 8.0 },
+      { id: 'desk1', label: 'Wayne Desk', type: 'desk', x: 2.5, y: 2.5 },
+      { id: 'desk2', label: 'Robin Desk', type: 'desk', x: 4, y: 2.5 },
+      { id: 'desk3', label: 'Oracle Desk', type: 'desk', x: 5.5, y: 2.5 },
+      { id: 'desk4', label: 'Alfred Desk', type: 'desk', x: 7, y: 3.5 },
+      { id: 'desk5', label: 'Cave Desk', type: 'desk', x: 3, y: 4.5 },
+      { id: 'desk6', label: 'Lab Desk', type: 'desk', x: 5, y: 5.5 },
+      { id: 'desk7', label: 'Ops Desk', type: 'desk', x: 7.5, y: 6.5 },
+    ],
+  },
+  starwars: {
+    name: 'starwars', brand: '🚀', renderer: 'office', franchiseId: 'starwars',
+    agentNames: ['Luke', 'Leia', 'Han', 'Chewbacca', 'R2-D2', 'C-3PO', 'Obi-Wan', 'Yoda'],
+    ui: { accent: '#e8c04a' },
+    backdrop: '/assets/starwars-backdrop.png',
+    floor: { base: '#4a4a52', alt: '#42424a', grid: 'rgba(255,220,120,0.12)' },
+    wall: { back: '#3a3a42', side: '#44444e', base: '#2e2e36', frame: '#5a4a2e' },
+    props: {
+      wood: '#6a5a3a', woodDark: '#4a3e28', woodTop: '#7a6a4a',
+      monitor: '#1e2230', monitorScreen: '#e8c04a', monitorGlow: 'rgba(232,192,74,0.30)',
+      chair: '#3a3a44', plant: '#5a6a4a', shelf: '#4a3a2e',
+      pot: '#5a4a2e', plantPot: '#4a3a2e',
+      book: ['#e8c04a', '#e8737c', '#5a8ae8', '#7a9a5a'],
+    },
+    fx: { dark: true },
+    desks: [[2.5,2.5],[4,2.5],[5.5,2.5],[7,3.5],[3,4.5],[5,5.5],[7.5,6.5]],
+    plants: [[0.8,5.5],[5.5,0.8],[7.8,8.5],[0.8,8.5]],
+    stations: [
+      { id: 'entrance', label: 'Hangar Door', type: 'entrance', x: 0.5, y: 7.2 },
+      { id: 'mail', label: 'Mail', type: 'mail', x: 1.2, y: 8.0 },
+      { id: 'desk1', label: 'Pilot Station', type: 'desk', x: 2.5, y: 2.5 },
+      { id: 'desk2', label: 'Tech Station', type: 'desk', x: 4, y: 2.5 },
+      { id: 'desk3', label: 'Comm Station', type: 'desk', x: 5.5, y: 2.5 },
+      { id: 'desk4', label: 'Cargo Desk', type: 'desk', x: 7, y: 3.5 },
+      { id: 'desk5', label: 'Nav Desk', type: 'desk', x: 3, y: 4.5 },
+      { id: 'desk6', label: 'Droid Bay', type: 'desk', x: 5, y: 5.5 },
+      { id: 'desk7', label: 'Bridge Desk', type: 'desk', x: 7.5, y: 6.5 },
+    ],
   },
 };
 
@@ -173,8 +236,10 @@ function handleEvent(ev) {
       eng.bubble(a, 'Arrived', null, 3.5);
       break;
     case 'agent_leave':
-      eng.bubble(a, 'Heading out', null, 3);
-      setTimeout(() => eng.removeAgent(a.id), 1200);
+      if (a) {
+        eng.bubble(a, 'Heading out', null, 3);
+        setTimeout(() => eng.removeAgent(a.id), 1200);
+      }
       break;
     case 'thinking': {
       a.status = 'thinking';
@@ -258,10 +323,11 @@ function relookAgents() {
 }
 /* on dark themes, keep very dark character hues readable (no camouflage) */
 function liftDark(hex) {
+  // aggressively brighten very dark hues on dark themes so characters pop
   const n = parseInt((hex || '#888888').slice(1), 16);
   const lum = (((n >> 16) & 255) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000;
-  if (lum >= 92) return hex;
-  const f = 1 + (110 - lum) / lum;
+  if (lum >= 105) return hex;
+  const f = 1 + (135 - lum) / Math.max(lum, 30);
   const c = (v) => clamp(Math.round(v * f), 0, 255);
   return `rgb(${c((n >> 16) & 255)},${c((n >> 8) & 255)},${c(n & 255)})`;
 }
@@ -738,7 +804,17 @@ function applyTheme(name) {
   } else if (eng.renderer) {
     eng.renderer.customBackdrop = null;
   }
-  relookAgents();
+  // restaff: RENAME existing agents to the theme's cast (smooth, keeps the roster)
+  if (theme.agentNames && theme.agentNames.length) {
+    const pool = theme.agentNames.slice();
+    for (const a of eng.agents.values()) {
+      if (!pool.length) break;
+      const nn = pool.shift();
+      if (a.name !== nn) a.name = nn;
+    }
+    renderRoster();
+  }
+  relookAgents(); // applies cast looks + dark-theme hue lift AFTER the rename
   localStorage.setItem('office-theme', name);
   $('brand-mark').textContent = theme.brand || '🏢';
   for (const btn of document.querySelectorAll('.theme-btn')) {
