@@ -29,9 +29,18 @@ const DunderRenderer = {
 
   /* grid -> screen: x maps to horizontal position, y scales (back = smaller) */
   map(eng, x, y) {
+    // scale-aware: the grid fits the viewport instead of using fixed fractions
     const depth = 0.72 + 0.28 * (y / 10);
-    const sx = eng.cssW * (0.055 + 0.89 * (x / 10));
-    const sy = eng.cssH * (0.66 + (1 - depth) * 0.12);
+    const s = eng.scale || 1;
+    const mobile = eng.cssW < 860;
+    // desktop: full-bleed backdrop with the grid anchored mid-low
+    // mobile: grid fills the width and sits in the visible lower 2/3
+    const sx = mobile
+      ? eng.cssW * 0.06 + (x / 10) * (eng.cssW * 0.88)
+      : eng.cssW * (0.055 + 0.89 * (x / 10));
+    const sy = mobile
+      ? eng.cssH * 0.42 + (y / 10) * (eng.cssH * 0.42) * (1.15 - depth * 0.4)
+      : eng.cssH * (0.66 + (1 - depth) * 0.12);
     return { x: sx, y: sy, d: depth };
   },
 
@@ -142,13 +151,19 @@ const DunderRenderer = {
     eng.particles.draw(ctx, eng.scale);
 
     // labels: hand-written sticky notes (production polish)
+    const mobile = eng.cssW < 860;
+    // on mobile, only show the most important labels (declutter)
+    const labelFilter = mobile
+      ? (st) => ['bullpen', 'conference', 'michael', 'reception'].includes(st.id)
+      : (st) => true;
     ctx.textAlign = 'center';
-    ctx.font = `800 ${eng.s(11)}px ${monoFont()}`;
+    ctx.font = `800 ${eng.s(mobile ? 9 : 11)}px ${monoFont()}`;
     for (const st of eng.theme.stations) {
+      if (!labelFilter(st)) continue;
       const c = this.map(eng, st.x, st.y);
       const back = st.y < 3.5;
       const front = st.type === 'reception' || st.type === 'mail';
-      const ly = back ? c.y - eng.s(44) : (front ? c.y - eng.s(40) : c.y - eng.s(26));
+      const ly = back ? c.y - eng.s(mobile ? 30 : 44) : (front ? c.y - eng.s(mobile ? 26 : 40) : c.y - eng.s(mobile ? 16 : 26));
       const tw = ctx.measureText(st.label.toUpperCase()).width;
       const rot = (st.id.length % 5 - 2) * 0.02; // tiny per-label rotation, hand-placed feel
       ctx.save();
@@ -168,8 +183,9 @@ const DunderRenderer = {
       ctx.fillText(st.label.toUpperCase(), 0, 0);
       ctx.restore();
     }
-    // name tags (always on for the cast, plus hover for the rest)
+    // name tags (always on for the cast, plus hover for the rest) — hidden on mobile
     const tags = [...eng.agents.values()];
+    if (mobile) { /* name tags off on small screens; bubbles carry identity */ }
     for (const a of tags) {
       // grounding shadow so characters sit ON the painted floor
       const c0 = this.map(eng, a.x, a.y);
