@@ -278,6 +278,27 @@ function connect() {
   es.onerror = () => setLive(false);
 }
 
+function startOfflineDemo() {
+  setLive(false);
+  $('live-label').textContent = 'demo · in-browser';
+  const banner = document.createElement('div');
+  banner.className = 'offline-banner';
+  banner.innerHTML = '<b>Browser demo</b> — no server detected. Agents are simulated in your browser. ' +
+    'Run <code>python3 -m office.server --db ~/.hermes/state.db</code> to watch your real agents.';
+  document.body.appendChild(banner);
+  startClientDemo(handleEvent, (label) => { $('live-label').textContent = label; });
+  // seed a few deliveries so the mailbox isn't empty
+  for (const name of CLIENT_DEMO_NAMES.slice(0, 3)) {
+    handleEvent({
+      id: 9000 + Math.floor(Math.random() * 500), ts: Date.now() / 1000 - 600,
+      type: 'delivery', agent: name, agent_id: 'demo-' + name.toLowerCase(),
+      session: 'demo-' + name.toLowerCase(), role: 'telegram',
+      title: 'Seeded delivery from ' + name,
+      content: 'This is a delivery that arrived before you opened the office.',
+    });
+  }
+}
+
 async function fetchState() {
   try {
     const res = await fetch('/api/state');
@@ -854,6 +875,13 @@ function boot() {
     }
   }
   wireShortcuts();
+
+  // probe server: if unreachable (static hosting), run the in-browser demo
+  fetch('/api/health', { method: 'GET' }).then((r) => {
+    if (!r.ok) throw new Error('no server');
+  }).catch(() => {
+    setTimeout(startOfflineDemo, 400); // let the SSE error state settle first
+  });
 
   const cb = document.getElementById('creator-btn');
   if (cb) {

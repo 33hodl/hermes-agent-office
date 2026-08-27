@@ -1,55 +1,91 @@
-# Integrating with Hermes Agent
+# Integrating Hermes Agent Office with hermes-agent
 
-Hermes Agent Office is a **standalone, local-first companion** — it never
-writes to Hermes, needs no credentials, and installs next to any Hermes
-setup. This document describes how it plugs in today, and the cleanest way
-for it to become a first-class add-on.
+This document is the adoption path for adding the office to the official
+`NousResearch/hermes-agent` repository — or for any user who wants to hook
+their own Hermes gateway into it.
 
-## Today: read the session store
+## Option A — Gateway event hook (recommended, ~30 lines)
 
-Hermes persists every session and message in a SQLite store
-(`~/.hermes/state.db`). The office opens it **read-only** (`mode=ro`,
-`PRAGMA query_only`) and polls for new rows — safe against a running Hermes
-(WAL and rollback journal both allow concurrent readers), zero writes, zero
-locks taken.
+The office is a pure consumer of a normalized event stream. The cleanest
+integration is a small hook on the gateway that forwards real agent activity
+to the office's HTTP endpoint as it happens.
 
-Mapping used (`office/hermes_db.py`):
+Paste this into your Hermes gateway config (or as a tiny plugin):
 
-| Hermes table | Office concept |
-|---|---|
-| `sessions` (source, display_name, model, title, end_reason) | agents, roles, names |
-| `messages` (role, content, tool_calls, tool_name, timestamp) | status, tool calls, deliveries |
+```python
+# gateway → office forwarder (add to hermes-agent gateway plugins/)
+import json, threading, urllib.request
 
-That same adapter is tested against the real schema in
-`tests/test_hermes_db.py`.
+OFFICE_URL = "http://127.0.0.1:8741"   # where the office server runs
 
-## Tomorrow: a first-class event hook
+def _post(event: dict) -> None:
+    try:
+        req = urllib.request.Request(
+            OFFICE_URL + "/api/events/ingest",
+            data=json.dumps(event).encode(),
+            headers={"Content-Type": "application/json"},
+        )
+        urllib.request.urlopen(req, timeout=3)
+    except Exception:
+        pass  # office offline — never block the gateway
 
-The office consumes **one normalized event shape**
-(`office/events.py` — `agent_enter`, `thinking`, `tool_call`, `status`,
-`delivery`, `idle`). The adapter is a single class with a tiny interface:
-`events_after(since_id)` + `health()`. Anything can feed it.
+def on_agent_event(ev: dict) -> None:
+    """Hook point: called on every gateway agent event (tool calls,
+    session updates, deliveries). Map to office events:"""
+    mapping = {
+        "tool_call": {"type": "tool_call", "tool": ev.get("tool")},
+        "session_update": {"type": "status", "text": ev.get("text")},
+    }
+    office_ev = mapping.get(ev.get("type"))
+    if not office_ev:
+        return
+    office_ev.update({
+        "agent": ev.get("agent") or ev.get("session_id", "agent"),
+        "session": ev.get("session_id", ""),
+        "role": ev.get("role", "telegram"),
+        "task": ev.get("task", ""),
+        "tokens": ev.get("tokens") or {},
+    })
+    threading.Thread(target=_post, args=(office_ev,), daemon=True).start()
+```
 
-The cleanest upstream integration is a **gateway event hook** (or a
-`hermes` plugin) that emits these events as they happen instead of polling
-the DB — the office then renders with zero latency and no filesystem
-coupling. The event schema is deliberately small so this is a ~50-line
-adapter.
+The office exposes `/api/events/ingest` (POST, accepts the normalized event
+schema; see `office/events.py`) so any external producer — the gateway, a
+plugin, a CI pipeline — can feed it.
 
-## Desktop app
+## Option B — Ship as a bundled add-on
 
-`desktop/plugin.js` registers the office as a Hermes Desktop pane (iframe to
-the local server). Install: copy the `desktop/` folder to
-`<hermes home>/desktop-plugins/hermes-office/`, run the office server, then
-**Reload desktop plugins** from the command palette.
+Structure that maps naturally onto the official repo:
 
-## Contribution notes (for the hermes-agent repo)
+```
+hermes-agent/
+  office/            ← the office package (server + sources)
+  web/               ← the dashboard (static, zero deps)
+  desktop/plugins/office/   ← the Desktop pane plugin
+```
 
-Per the hermes-agent contribution rubric, third-party add-ons ship as
-**standalone repos** and are promoted via the Nous Research Discord
-(`#plugins-skills-and-skins`) rather than landing inside the core tree.
-This repo is exactly that shape: no changes to hermes-agent core, no new
-env vars, no telemetry, no prompt-cache impact. If the maintainers want it
-more visible, a docs link or a `hermes skills`/plugins catalog entry would
-be the natural next step — the adapter and event schema are the seams it
-would hang off.
+The dashboard is dependency-free (Python stdlib + vanilla JS), so it can be
+sold as `pip install hermes-agent[office]` with zero new runtime deps.
+
+## Option C — Docs/catalog mention
+
+At minimum, a catalog entry in the official docs ("Community: watch your
+agents work — Hermes Agent Office") pointing at
+`github.com/33hodl/hermes-agent-office` with the two-command quickstart.
+
+## Install for users (without touching hermes-agent)
+
+```bash
+bash <(curl -s https://raw.githubusercontent.com/33hodl/hermes-agent-office/master/scripts/install.sh)
+```
+
+or, inside any Hermes session: paste the repo URL and say "install this" —
+a bundled skill (`skills/hermes-agent-office/SKILL.md`) walks the agent
+through clone → run → open.
+
+## What the office needs from a host
+
+- Python 3.10+ (stdlib only — no pip deps)
+- Read access to the Hermes `state.db` (or a forwarded event stream)
+- One open localhost port (default 8741)
+- Zero telemetry, zero cloud, zero credentials — safe to ship by default

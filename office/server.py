@@ -151,6 +151,26 @@ class OfficeHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path.split("?")[0]
+        if path == "/api/events/ingest":
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+            except Exception:
+                body = {}
+            if not isinstance(body, dict) or "type" not in body:
+                return self._json({"ok": False, "error": "expected an event object"}, 400)
+            ev = dict(body)
+            if "id" not in ev:
+                try:
+                    last = self.app.store.snapshot().get("last_event_id", 0)
+                except Exception:
+                    last = 0
+                ev["id"] = last + 1
+            ev.setdefault("ts", time.time())
+            try:
+                self.app.ingest([ev])
+            except Exception as exc:
+                return self._json({"ok": False, "error": str(exc)[:200]}, 400)
+            return self._json({"ok": True, "id": ev["id"]})
         if path == "/api/art":
             try:
                 length = int(self.headers.get("Content-Length", 0))

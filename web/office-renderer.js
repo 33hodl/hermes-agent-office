@@ -318,27 +318,10 @@ const OfficeRenderer = {
     if (eng.staticLayer) {
       ctx.drawImage(eng.staticLayer, 0, 0);
       const band = Math.round(eng.cssH * 0.13);
-      if (this._blurTop) {
-        ctx.drawImage(this._blurTop, 0, 0, eng.cssW, band, 0, 0, eng.cssW, band);
-        // feathered seam so the blur fades in
-        const fade = ctx.createLinearGradient(0, band * 0.4, 0, band);
-        fade.addColorStop(0, 'rgba(0,0,0,0)');
-        fade.addColorStop(1, 'rgba(0,0,0,1)');
-        ctx.globalCompositeOperation = 'destination-in';
-        ctx.fillStyle = fade;
-        ctx.fillRect(0, 0, eng.cssW, band);
-        ctx.globalCompositeOperation = 'source-over';
-      }
+      if (this._blurTop) ctx.drawImage(this._blurTop, 0, 0, eng.cssW, band, 0, 0, eng.cssW, band);
       if (this._blurBottom) {
         const y0 = eng.cssH - band;
         ctx.drawImage(this._blurBottom, 0, 0, eng.cssW, band, 0, y0, eng.cssW, band);
-        const fade2 = ctx.createLinearGradient(0, y0, 0, y0 + band * 0.6);
-        fade2.addColorStop(0, 'rgba(0,0,0,1)');
-        fade2.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.globalCompositeOperation = 'destination-in';
-        ctx.fillStyle = fade2;
-        ctx.fillRect(0, y0, eng.cssW, band);
-        ctx.globalCompositeOperation = 'source-over';
       }
     }
 
@@ -966,12 +949,18 @@ const OfficeRenderer = {
       c.width = w; c.height = band;
       return c;
     };
-    // top band
+    // top band (fade baked in: sharp at the seam, soft at the edge)
     const top = make();
     const tg = top.getContext('2d');
     tg.drawImage(eng.staticLayer, 0, 0, w, band, 0, 0, w, band);
     tg.filter = 'blur(' + Math.max(3, band * 0.16) + 'px)';
     tg.drawImage(eng.staticLayer, 0, 0, w, band, 0, 0, w, band);
+    const fadeT = tg.createLinearGradient(0, band * 0.35, 0, band);
+    fadeT.addColorStop(0, 'rgba(0,0,0,0)');
+    fadeT.addColorStop(1, 'rgba(0,0,0,1)');
+    tg.globalCompositeOperation = 'destination-in';
+    tg.fillStyle = fadeT;
+    tg.fillRect(0, 0, w, band);
     this._blurTop = top;
     // bottom band
     const bot = make();
@@ -980,6 +969,12 @@ const OfficeRenderer = {
     bg.drawImage(eng.staticLayer, 0, y0, w, band, 0, 0, w, band);
     bg.filter = 'blur(' + Math.max(3, band * 0.16) + 'px)';
     bg.drawImage(eng.staticLayer, 0, y0, w, band, 0, 0, w, band);
+    const fadeB = bg.createLinearGradient(0, 0, 0, band * 0.65);
+    fadeB.addColorStop(0, 'rgba(0,0,0,1)');
+    fadeB.addColorStop(1, 'rgba(0,0,0,0)');
+    bg.globalCompositeOperation = 'destination-in';
+    bg.fillStyle = fadeB;
+    bg.fillRect(0, 0, w, band);
     this._blurBottom = bot;
   },
 

@@ -407,3 +407,11 @@ body[data-theme="office"] .brand-name { font-weight: 800; }
   .topbar-task input { width: 100%; }
   #stage { min-height: 70vh; }
 }
+
+.offline-banner {
+  position: fixed; top: 54px; left: 50%; transform: translateX(-50%); z-index: 50;
+  background: rgba(40,34,24,.92); color: #f5e9c8; border: 1px solid rgba(217,111,74,.5);
+  border-radius: 10px; padding: 8px 14px; font-size: 12px; max-width: 92vw;
+  box-shadow: 0 4px 20px rgba(0,0,0,.35); line-height: 1.45;
+}
+.offline-banner code { background: rgba(255,255,255,.12); padding: 1px 5px; border-radius: 5px; font-size: 11px; }
