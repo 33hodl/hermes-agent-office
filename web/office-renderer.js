@@ -31,7 +31,8 @@ const OfficeRenderer = {
   },
 
   _loadSprites() {
-    const names = ['batman', 'robin', 'catwoman', 'joker'];
+    const names = ['batman', 'robin', 'catwoman', 'joker', 'luke', 'leia', 'han', 'chewbacca',
+                   'michael', 'dwight', 'jim', 'pam'];
     for (const n of names) {
       const img = new Image();
       img.src = '/assets/char-' + n + '.png';
