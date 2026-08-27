@@ -369,10 +369,6 @@ body[data-theme="office"] .brand-name { font-weight: 800; }
 
 /* topbar right cluster */
 .topbar-right { display: flex; align-items: center; gap: 8px; }
-.mute-btn {
-  border: 0; background: transparent; color: var(--text-dim); font-size: 15px;
-  cursor: pointer; padding: 4px 6px; border-radius: 8px; line-height: 1;
-}
 .mute-btn:hover { color: var(--text); background: var(--accent-soft); }
 
 /* welcome overlay */

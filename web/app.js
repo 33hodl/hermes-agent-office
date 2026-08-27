@@ -543,7 +543,6 @@ async function submitTask(text) {
       return;
     }
     toast('Task assigned', 'The team is on it — watch the office', '#d96f4a');
-    Sound.assigned();
   } catch (e) {
     toast('Task not accepted', 'Office server unreachable', '#c0504d');
   }
@@ -605,7 +604,7 @@ function wireShortcuts() {
       case '1': applyTheme('office'); break;
       case '2': applyTheme('nous'); break;
       case '3': applyTheme('dunder'); break;
-      case 'm': case 'M': toggleMute(); break;
+      case 'm': case 'M':  break;
       case 'g': case 'G': openMailbox(); break;
       case 't': case 'T':
         e.preventDefault();
@@ -657,90 +656,8 @@ function toast(title, sub, color) {
 }
 
 /* ============================== sound (WebAudio, zero assets) ============================== */
-const Sound = {
-  ctx: null, muted: false,
-  ensure() {
-    if (!this.ctx) {
-      try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
-    }
-    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
-  },
-  pop(freq = 660, dur = 0.09, gain = 0.05) {
-    if (this.muted || !this.ctx) return;
-    const t = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const g = this.ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, t);
-    osc.frequency.exponentialRampToValueAtTime(freq * 1.8, t + dur);
-    g.gain.setValueAtTime(gain, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    osc.connect(g).connect(this.ctx.destination);
-    osc.start(t); osc.stop(t + dur + 0.02);
-  },
-  delivery() { this.pop(660, 0.12, 0.06); setTimeout(() => this.pop(880, 0.1, 0.04), 90); },
-  theme() { this.pop(440, 0.08, 0.04); },
-  assigned() { this.pop(520, 0.1, 0.05); setTimeout(() => this.pop(700, 0.09, 0.04), 80); },
-  /* ambient office soundscape — synthesized, zero assets */
-  ambientNodes: null,
-  startAmbient() {
-    this.ensure();
-    if (this.ambientNodes || !this.ctx || this.muted) return;
-    const ctx = this.ctx;
-    const master = ctx.createGain();
-    master.gain.value = 0.035;
-    master.connect(ctx.destination);
-    // brown-ish noise (air handling / room tone)
-    const len = ctx.sampleRate * 2;
-    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-    const d = buf.getChannelData(0);
-    let last = 0;
-    for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; last = (last + 0.02 * w) / 1.02; d[i] = last * 3.5; }
-    const noise = ctx.createBufferSource();
-    noise.buffer = buf;
-    noise.loop = true;
-    const lp = ctx.createBiquadFilter();
-    lp.type = 'lowpass';
-    lp.frequency.value = 320;
-    noise.connect(lp).connect(master);
-    noise.start();
-    // faint keyboard click loop
-    const clicks = ctx.createGain();
-    clicks.gain.value = 0.35;
-    clicks.connect(master);
-    const tick = () => {
-      if (!this.ambientNodes || this.muted) return;
-      if (Math.random() < 0.5) {
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = 'square';
-        o.frequency.value = 1200 + Math.random() * 800;
-        g.gain.setValueAtTime(0.15, ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
-        o.connect(g).connect(clicks);
-        o.start(); o.stop(ctx.currentTime + 0.04);
-      }
-      setTimeout(tick, 120 + Math.random() * 420);
-    };
-    tick();
-    this.ambientNodes = { master, noise };
-  },
-  stopAmbient() {
-    if (this.ambientNodes) {
-      try { this.ambientNodes.noise.stop(); } catch (e) {}
-      this.ambientNodes = null;
-    }
-  },
-};
 
-function toggleMute() {
-  Sound.muted = !Sound.muted;
-  if (Sound.muted) Sound.stopAmbient();
-  else Sound.startAmbient();
-  const b = document.getElementById('mute-btn');
-  if (b) b.textContent = Sound.muted ? '🔇' : '🔊';
-  localStorage.setItem('office-muted', Sound.muted ? '1' : '0');
-}
+
 
 /* ============================== delivery choreography ============================== */
 
@@ -773,7 +690,6 @@ function finishPendingDeliveries() {
         toast('New mail from ' + ev.agent, short(ev.title || ev.text || 'A delivery landed in your mailbox'), a.color);
       }
       store.unread += 1;
-      Sound.ensure(); Sound.delivery();
       renderMailboxBadge();
       renderRoster();
     }
@@ -850,7 +766,6 @@ function applyCustomTheme(theme) {
   saved[id] = stripCustomForSave(theme);
   localStorage.setItem('office-custom-themes', JSON.stringify(saved));
   applyTheme(id);
-  Sound.ensure(); Sound.theme();
   toast('Office ready', `${theme.label} is live — your agents have moved in`, theme.ui.accent);
 }
 
@@ -886,18 +801,6 @@ function boot() {
   restoreCustomThemes();
   const saved = localStorage.getItem('office-theme') || 'office';
   applyTheme(saved);
-  // sound OFF by default (per user: no generic audio); user opts in via 🔊
-  Sound.muted = localStorage.getItem('office-muted') !== '0';
-  // autoplay policy: start the soundscape on first click/key anywhere
-  const kick = () => {
-    if (!Sound.muted) Sound.startAmbient();
-    window.removeEventListener('pointerdown', kick);
-    window.removeEventListener('keydown', kick);
-  };
-  window.addEventListener('pointerdown', kick);
-  window.addEventListener('keydown', kick);
-  const mb = document.getElementById('mute-btn');
-  if (mb) { mb.textContent = Sound.muted ? '🔇' : '🔊'; mb.addEventListener('click', toggleMute); }
 
   for (const btn of document.querySelectorAll('.theme-btn')) {
     btn.addEventListener('click', () => applyTheme(btn.dataset.themeName));

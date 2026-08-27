@@ -14,7 +14,7 @@ const OfficeRenderer = {
     this.agentsV = new Map();   // per-agent visual state
     this.backdrop = null;
     const img = new Image();
-    img.src = '/assets/office-window.png';
+    img.src = '/assets/office-backdrop-v3.png';
     img.onload = () => { this.backdrop = img; if (eng.renderer === this) eng.resize(); };
     this._dust = [];
     this._blurTop = null;
