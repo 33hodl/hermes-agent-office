@@ -11,7 +11,7 @@
   }
   if ('caches' in window) {
     caches.keys().then(function (ks) {
-      ks.forEach(function (k) { if (k !== 'office-v1787814290') caches.delete(k); });
+      ks.forEach(function (k) { caches.delete(k); });
     });
   }
 })();
