@@ -17,6 +17,9 @@ const OfficeRenderer = {
     img.src = '/assets/office-window.png';
     img.onload = () => { this.backdrop = img; if (eng.renderer === this) eng.resize(); };
     this._dust = [];
+    this._blurTop = null;
+    this._blurBottom = null;
+    this._blurTimer = 0;
     for (let i = 0; i < 46; i++) {
       this._dust.push({
         x: Math.random(), y: Math.random(), z: Math.random() * 0.6 + 0.2,
@@ -302,10 +305,42 @@ const OfficeRenderer = {
     }
   },
 
-  /* per-frame dynamic: agents, mailbox glow, dust, labels */
+  /* per-frame dynamic: agents, mailbox glow, dust, labels, tilt-shift DOF */
   draw(eng, ctx, dt) {
     ctx.clearRect(0, 0, eng.cssW, eng.cssH);
-    if (eng.staticLayer) ctx.drawImage(eng.staticLayer, 0, 0);
+    this._blurTimer -= dt;
+    // rebuild the blurred edge bands occasionally (and on resize)
+    if ((!this._blurTop || this._blurTimer <= 0) && eng.staticLayer) {
+      this._buildBlurBands(eng);
+      this._blurTimer = 2.0;
+    }
+    // composite: sharp static center + blurred top/bottom edges
+    if (eng.staticLayer) {
+      ctx.drawImage(eng.staticLayer, 0, 0);
+      const band = Math.round(eng.cssH * 0.13);
+      if (this._blurTop) {
+        ctx.drawImage(this._blurTop, 0, 0, eng.cssW, band, 0, 0, eng.cssW, band);
+        // feathered seam so the blur fades in
+        const fade = ctx.createLinearGradient(0, band * 0.4, 0, band);
+        fade.addColorStop(0, 'rgba(0,0,0,0)');
+        fade.addColorStop(1, 'rgba(0,0,0,1)');
+        ctx.globalCompositeOperation = 'destination-in';
+        ctx.fillStyle = fade;
+        ctx.fillRect(0, 0, eng.cssW, band);
+        ctx.globalCompositeOperation = 'source-over';
+      }
+      if (this._blurBottom) {
+        const y0 = eng.cssH - band;
+        ctx.drawImage(this._blurBottom, 0, 0, eng.cssW, band, 0, y0, eng.cssW, band);
+        const fade2 = ctx.createLinearGradient(0, y0, 0, y0 + band * 0.6);
+        fade2.addColorStop(0, 'rgba(0,0,0,1)');
+        fade2.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.globalCompositeOperation = 'destination-in';
+        ctx.fillStyle = fade2;
+        ctx.fillRect(0, y0, eng.cssW, band);
+        ctx.globalCompositeOperation = 'source-over';
+      }
+    }
 
     // mailbox (dynamic glow + flag)
     const mail = eng.theme.stations.find(s => s.type === 'mail');
@@ -921,6 +956,31 @@ const OfficeRenderer = {
     ctx.arc(2.6 * s, -12 * s, 1.4 * s, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+  },
+
+  _buildBlurBands(eng) {
+    const w = eng.cssW, h = eng.cssH;
+    const band = Math.round(h * 0.13);
+    const make = () => {
+      const c = document.createElement('canvas');
+      c.width = w; c.height = band;
+      return c;
+    };
+    // top band
+    const top = make();
+    const tg = top.getContext('2d');
+    tg.drawImage(eng.staticLayer, 0, 0, w, band, 0, 0, w, band);
+    tg.filter = 'blur(' + Math.max(3, band * 0.16) + 'px)';
+    tg.drawImage(eng.staticLayer, 0, 0, w, band, 0, 0, w, band);
+    this._blurTop = top;
+    // bottom band
+    const bot = make();
+    const bg = bot.getContext('2d');
+    const y0 = h - band;
+    bg.drawImage(eng.staticLayer, 0, y0, w, band, 0, 0, w, band);
+    bg.filter = 'blur(' + Math.max(3, band * 0.16) + 'px)';
+    bg.drawImage(eng.staticLayer, 0, y0, w, band, 0, 0, w, band);
+    this._blurBottom = bot;
   },
 
   drawLabels(eng, ctx) {

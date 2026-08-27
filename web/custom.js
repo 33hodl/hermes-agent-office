@@ -339,9 +339,35 @@ const GENERIC_LOOKS = [
   { hue:'#e8d5a0', topper:'hair',    acc:'mug' },
 ];
 
+/* Generic office cast — distinct looks for the built-in themes (no franchise) */
+const OFFICE_CAST = {
+  Uma:   { hue:'#7ec8c0', body:'slim',   topper:'headphones', tc:'#3a5a5a', acc:'coffee', face:'calm' },
+  Xyla:  { hue:'#e8a0b8', body:'slim',   topper:'bob',        tc:'#7a3a4a', acc:'bow',    face:'calm' },
+  Hazel: { hue:'#f2a38f', body:'default', topper:'catears',   tc:'#8a4a3a', acc:'mug',    face:'calm' },
+  Dash:  { hue:'#a8c89a', body:'wide',   topper:'cap',        tc:'#3a5a2e', acc:'book',   face:'calm' },
+  Pixel: { hue:'#c39ad8', body:'small',  topper:'horns',      tc:'#5a3a7a', acc:'none',   face:'calm' },
+  Coco:  { hue:'#8fb7e8', body:'round',  topper:'bun',        tc:'#2e4a6a', acc:'none',   face:'calm' },
+  Gizmo: { hue:'#e8d5a0', body:'lanky',  topper:'hair',       tc:'#5a4a1e', acc:'card',   face:'grin' },
+  Yara:  { hue:'#e8a0a0', body:'tall',   topper:'ears',       tc:'#5a2e3a', acc:'collar', face:'calm' },
+  Nova:  { hue:'#9ab8c8', body:'default',topper:'hair',       tc:'#2e4a5a', acc:'glasses',face:'calm' },
+  Sage:  { hue:'#a8c8a0', body:'tall',   topper:'headphones', tc:'#3a5a3a', acc:'none',  face:'calm' },
+};
+
+
 function castLook(name, franchiseId) {
   const cast = CAST[franchiseId];
   if (cast && cast[name]) return Object.assign({ body:'default', face:'calm' }, cast[name]);
+  // fall back to the named generic-office cast, then to procedural looks
+  const named = OFFICE_CAST[name];
+  if (named) return Object.assign({ body:'default', face:'calm' }, named);
+  const g = GENERIC_LOOKS[hashCode(name || '') % GENERIC_LOOKS.length];
+  return Object.assign({ body:'default', face:'calm' }, g);
+}
+
+
+function officeCastLook(name) {
+  const hit = OFFICE_CAST[name];
+  if (hit) return Object.assign({ body:'default', face:'calm' }, hit);
   const g = GENERIC_LOOKS[hashCode(name || '') % GENERIC_LOOKS.length];
   return Object.assign({ body:'default', face:'calm' }, g);
 }

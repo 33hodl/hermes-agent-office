@@ -16,13 +16,22 @@ tool room when they call a tool, and drop finished work in your mailbox.
 | **Nous** | a holographic data plane — AI-painted data center, neon perspective grid, glowing agent orbs with light trails |
 | **Dunder Mifflin** | the Scranton branch, painted in flat 2D sitcom style — reception, bullpen, conference room, break room |
 
+### Cinematic feel
+
+Every theme gets a **tilt-shift depth-of-field** (soft blurred top/bottom edges),
+contact shadows, warm spotlight halos behind characters, and a warm/cool
+split-tone grade — the "photographed miniature" look. A **generated ambient
+soundscape** (room tone + keyboard clicks, zero audio assets) plays once you
+interact; toggle it with the 🔊 button.
+
 ### Characters that actually look like their names
 
 Each franchise's agents are visually **distinct characters**, not colored blobs:
 Batman gets a pointed-eared cowl and cape, Robin a mask and red suit, Joker green
 hair and a playing card — same for Star Wars, Ghibli, The Office and the rest
 (each agent owns a body type, head silhouette, one accessory and a bound
-identity color across canvas, roster and mail).
+identity color across canvas, roster and mail). Even the built-in themes give
+every demo agent its own look (headphones, bob, cat ears, coffee, book…).
 
 ### First run
 

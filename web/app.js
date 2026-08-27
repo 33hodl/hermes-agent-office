@@ -9,7 +9,7 @@
 
 const THEMES = {
   office: {
-    name: 'office', brand: '🏢', renderer: 'office',
+    name: 'office', brand: '🏢', renderer: 'office', franchiseId: 'office',
     ui: { accent: '#d96f4a' },
     floor: { base: '#e8dcc3', alt: '#e1d3b6', grid: 'rgba(120,100,60,0.10)' },
     wall: { back: '#a9b8a0', side: '#9db29a', base: '#8fa08a', frame: '#7c8a76' },
@@ -36,7 +36,7 @@ const THEMES = {
   },
 
   nous: {
-    name: 'nous', brand: '◈', renderer: 'nous',
+    name: 'nous', brand: '◈', renderer: 'nous', franchiseId: 'office',
     ui: { accent: '#4d7cf6' },
     floor: { base: '#0d0d15', alt: '#10101a', grid: 'rgba(77,124,246,0.28)' },
     wall: { back: '#13131e', side: '#101019', base: '#1a1a28', frame: '#2a2a42' },
@@ -63,7 +63,7 @@ const THEMES = {
   },
 
   dunder: {
-    name: 'dunder', brand: '📎', renderer: 'dunder',
+    name: 'dunder', brand: '📎', renderer: 'dunder', franchiseId: 'office',
     ui: { accent: '#c07c2b' },
     floor: { base: '#8b93a8', alt: '#878fa4', grid: 'rgba(60,60,80,0.14)' },
     wall: { back: '#d9c9a8', side: '#d3c2a0', base: '#b8a683', frame: '#a59370' },
@@ -229,7 +229,9 @@ function handleEvent(ev) {
 
 function agentFromStore(ev) {
   const name = ev.agent || 'Agent';
-  const look = castLook(name, (eng.theme && eng.theme.franchiseId) || null);
+  const look = (eng.theme && eng.theme.franchiseId)
+    ? castLook(name, eng.theme.franchiseId)
+    : officeCastLook(name);
   return {
     id: ev.agent_id || ev.session || ('a' + Math.random().toString(36).slice(2)),
     name,
@@ -249,7 +251,7 @@ function relookAgents() {
   const fid = (eng.theme && eng.theme.franchiseId) || null;
   const darkTheme = !!(eng.theme && eng.theme.fx && eng.theme.fx.dark);
   for (const a of eng.agents.values()) {
-    a.look = castLook(a.name, fid);
+    a.look = fid ? castLook(a.name, fid) : officeCastLook(a.name);
     a.look.hue = darkTheme ? liftDark(a.look.hue || a.color) : (a.look.hue || a.color);
     a.color = a.look.hue;
   }
@@ -476,10 +478,62 @@ const Sound = {
   },
   delivery() { this.pop(660, 0.12, 0.06); setTimeout(() => this.pop(880, 0.1, 0.04), 90); },
   theme() { this.pop(440, 0.08, 0.04); },
+  /* ambient office soundscape — synthesized, zero assets */
+  ambientNodes: null,
+  startAmbient() {
+    this.ensure();
+    if (this.ambientNodes || !this.ctx || this.muted) return;
+    const ctx = this.ctx;
+    const master = ctx.createGain();
+    master.gain.value = 0.035;
+    master.connect(ctx.destination);
+    // brown-ish noise (air handling / room tone)
+    const len = ctx.sampleRate * 2;
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; last = (last + 0.02 * w) / 1.02; d[i] = last * 3.5; }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    noise.loop = true;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 320;
+    noise.connect(lp).connect(master);
+    noise.start();
+    // faint keyboard click loop
+    const clicks = ctx.createGain();
+    clicks.gain.value = 0.35;
+    clicks.connect(master);
+    const tick = () => {
+      if (!this.ambientNodes || this.muted) return;
+      if (Math.random() < 0.5) {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'square';
+        o.frequency.value = 1200 + Math.random() * 800;
+        g.gain.setValueAtTime(0.15, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
+        o.connect(g).connect(clicks);
+        o.start(); o.stop(ctx.currentTime + 0.04);
+      }
+      setTimeout(tick, 120 + Math.random() * 420);
+    };
+    tick();
+    this.ambientNodes = { master, noise };
+  },
+  stopAmbient() {
+    if (this.ambientNodes) {
+      try { this.ambientNodes.noise.stop(); } catch (e) {}
+      this.ambientNodes = null;
+    }
+  },
 };
 
 function toggleMute() {
   Sound.muted = !Sound.muted;
+  if (Sound.muted) Sound.stopAmbient();
+  else Sound.startAmbient();
   const b = document.getElementById('mute-btn');
   if (b) b.textContent = Sound.muted ? '🔇' : '🔊';
   localStorage.setItem('office-muted', Sound.muted ? '1' : '0');
@@ -620,6 +674,14 @@ function boot() {
   const saved = localStorage.getItem('office-theme') || 'office';
   applyTheme(saved);
   Sound.muted = localStorage.getItem('office-muted') === '1';
+  // autoplay policy: start the soundscape on first click/key anywhere
+  const kick = () => {
+    if (!Sound.muted) Sound.startAmbient();
+    window.removeEventListener('pointerdown', kick);
+    window.removeEventListener('keydown', kick);
+  };
+  window.addEventListener('pointerdown', kick);
+  window.addEventListener('keydown', kick);
   const mb = document.getElementById('mute-btn');
   if (mb) { mb.textContent = Sound.muted ? '🔇' : '🔊'; mb.addEventListener('click', toggleMute); }
 

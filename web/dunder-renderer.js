@@ -10,6 +10,9 @@ const DunderRenderer = {
 
   init(eng) {
     this.agentsV = new Map();
+    this._blurTop = null;
+    this._blurBottom = null;
+    this._blurTimer = 0;
     this.backdrop = null;
     const img = new Image();
     img.src = '/assets/dunder-backdrop.png';
@@ -111,6 +114,11 @@ const DunderRenderer = {
 
   draw(eng, ctx, dt) {
     ctx.clearRect(0, 0, eng.cssW, eng.cssH);
+    this._blurTimer -= dt;
+    if ((!this._blurTop || this._blurTimer <= 0) && eng.staticLayer) {
+      this._buildBlurBands(eng);
+      this._blurTimer = 2.0;
+    }
     if (eng.staticLayer) ctx.drawImage(eng.staticLayer, 0, 0);
 
     const now = performance.now() / 1000;
@@ -171,6 +179,33 @@ const DunderRenderer = {
       }
     }
     ctx.textAlign = 'left';
+
+    // tilt-shift DOF bands (soften top/bottom edges)
+    const band = Math.round(eng.cssH * 0.11);
+    if (this._blurTop) ctx.drawImage(this._blurTop, 0, 0, eng.cssW, band, 0, 0, eng.cssW, band);
+    if (this._blurBottom) {
+      const y0 = eng.cssH - band;
+      ctx.drawImage(this._blurBottom, 0, 0, eng.cssW, band, 0, y0, eng.cssW, band);
+    }
+  },
+
+  _buildBlurBands(eng) {
+    const w = eng.cssW, h = eng.cssH;
+    const band = Math.round(h * 0.11);
+    const mk = () => { const c = document.createElement('canvas'); c.width = w; c.height = band; return c; };
+    const top = mk();
+    const tg = top.getContext('2d');
+    tg.drawImage(eng.staticLayer, 0, 0, w, band, 0, 0, w, band);
+    tg.filter = 'blur(' + Math.max(3, band * 0.14) + 'px)';
+    tg.drawImage(eng.staticLayer, 0, 0, w, band, 0, 0, w, band);
+    this._blurTop = top;
+    const bot = mk();
+    const bg = bot.getContext('2d');
+    const y0 = h - band;
+    bg.drawImage(eng.staticLayer, 0, y0, w, band, 0, 0, w, band);
+    bg.filter = 'blur(' + Math.max(3, band * 0.14) + 'px)';
+    bg.drawImage(eng.staticLayer, 0, y0, w, band, 0, 0, w, band);
+    this._blurBottom = bot;
   },
 
   drawAgent(eng, ctx, a, now) {
