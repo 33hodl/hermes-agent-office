@@ -72,15 +72,22 @@ const OfficeRenderer = {
 
     /* custom theme backdrop: full-canvas painted scene (immersive) */
     const customBg = !!this.customBackdrop;
+    const fullbleed = !!eng.theme.fullbleed;
     if (customBg) {
       const iw = this.customBackdrop.width, ih = this.customBackdrop.height;
       const ar = iw / ih, tar = w / h;
       let dw = w, dh = h, dx = 0, dy = 0;
-      if (ar > tar) { dw = h * ar; dx = -(dw - w) / 2; }
-      else { dh = w / ar; dy = -(dh - h) / 2; }
+      if (fullbleed) {
+        // COVER: fill the entire canvas (crop excess) so no beige shows
+        if (ar > tar) { dh = h; dw = h * ar; dx = -(dw - w) / 2; }
+        else { dw = w; dh = w / ar; dy = -(dh - h) / 2; }
+      } else {
+        if (ar > tar) { dw = h * ar; dx = -(dw - w) / 2; }
+        else { dh = w / ar; dy = -(dh - h) / 2; }
+      }
       g.drawImage(this.customBackdrop, dx, dy, dw, dh);
-      // darken slightly so the office pops
-      g.fillStyle = 'rgba(10,8,20,0.20)';
+      // darken slightly so the office pops (less on fullbleed)
+      g.fillStyle = fullbleed ? 'rgba(8,6,16,0.0)' : 'rgba(10,8,20,0.20)';
       g.fillRect(0, 0, w, h);
       // warm light pool on the floor beneath the office (agents read clearly)
       const pool = g.createRadialGradient(eng.cssW / 2, eng.cssH * 0.72, eng.s(30),
@@ -89,6 +96,11 @@ const OfficeRenderer = {
       pool.addColorStop(1, 'rgba(255,224,170,0)');
       g.fillStyle = pool;
       g.fillRect(0, 0, w, h);
+    }
+    if (fullbleed) {
+      // full-bleed franchise themes: the painted scene IS the view
+      this._blurTop = null; this._blurBottom = null; this._blurTimer = 0;
+      return this._buildStaticFullbleed(eng, g, w, h, layer);
     }
 
     /* floor */
@@ -316,6 +328,26 @@ const OfficeRenderer = {
       g.fillStyle = 'rgba(120,140,110,0.5)';
       eng.roundRectPath(g, c.x - eng.s(20), c.y - eng.s(4), eng.s(40), eng.s(8), eng.s(4));
       g.fill();
+    }
+  },
+
+  /* full-bleed franchise themes: painted scene shows through; draw only desks
+     and stations on top, no opaque floor/walls */
+  _buildStaticFullbleed(eng, g, w, h, layer) {
+    const p = eng.theme.props;
+    // NO grid, NO desks — the painted scene (hangar / Gotham) is the whole view
+    // mailbox
+    const mail = eng.theme.stations.find(s => s.type === 'mail');
+    if (mail) {
+      const c = this.map(eng, mail.x, mail.y);
+      g.fillStyle = p.wood;
+      g.beginPath();
+      g.roundRect(c.x - eng.s(20), c.y - eng.s(10), eng.s(40), eng.s(16), eng.s(5));
+      g.fill();
+      g.fillStyle = '#f5f5f0';
+      g.font = `800 ${eng.s(10)}px sans-serif`;
+      g.textAlign = 'center';
+      g.fillText('MAIL', c.x, c.y + eng.s(3));
     }
   },
 
@@ -599,12 +631,22 @@ const OfficeRenderer = {
     ctx.beginPath();
     ctx.ellipse(c.x, c.y + u * 3, u * 15, u * 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    // draw sprite with slight bob + squash on walk
+    // draw sprite with slight bob + squash on walk, clipped to a soft circle
+    // (kills any leftover background from the generated art)
     const sq = a.moving ? 0.06 : 0;
     ctx.save();
     ctx.translate(c.x, c.y - hh / 2 + bob + u * 6);
     ctx.scale(1 + sq, 1 - sq);
+    ctx.beginPath();
+    ctx.arc(0, 0, w * 0.52, 0, Math.PI * 2);
+    ctx.clip();
     ctx.drawImage(img, -w / 2, -hh / 2, w, hh);
+    // subtle rim so the clip reads as intentional
+    ctx.beginPath();
+    ctx.arc(0, 0, w * 0.52, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
     ctx.restore();
     // halo behind on dark themes
     if (eng.theme && eng.theme.fx && eng.theme.fx.dark) {

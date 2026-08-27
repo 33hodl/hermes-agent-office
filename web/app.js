@@ -95,7 +95,7 @@ const THEMES = {
   },
 
   batman: {
-    name: 'batman', brand: '🦇', renderer: 'office', franchiseId: 'batman',
+    name: 'batman', brand: '🦇', renderer: 'office', franchiseId: 'batman', fullbleed: true,
     agentNames: ['Batman', 'Robin', 'Catwoman', 'Joker', 'Bane', 'Nightwing', 'Batgirl', 'Alfred'],
     ui: { accent: '#8a6fd8' },
     backdrop: '/assets/batman-backdrop.png',
@@ -124,7 +124,7 @@ const THEMES = {
     ],
   },
   starwars: {
-    name: 'starwars', brand: '🚀', renderer: 'office', franchiseId: 'starwars',
+    name: 'starwars', brand: '🚀', renderer: 'office', franchiseId: 'starwars', fullbleed: true,
     agentNames: ['Luke', 'Leia', 'Han', 'Chewbacca', 'R2-D2', 'C-3PO', 'Obi-Wan', 'Yoda'],
     ui: { accent: '#e8c04a' },
     backdrop: '/assets/starwars-backdrop.png',
@@ -707,16 +707,25 @@ function applyTheme(name) {
   eng.setTheme(theme);
   eng.setRenderer(RENDERERS[theme.renderer || 'office']);
   if (eng.renderer && theme.backdrop && eng.renderer.name === 'office') {
-    // custom backdrop drawn behind the back walls
+    // custom backdrop drawn behind the back walls (or full-bleed for franchise themes)
     const img = new Image();
     img.src = theme.backdrop;
-    img.onload = () => {
+    const apply = () => {
       if (eng.renderer) {
         eng.renderer.customBackdrop = img;
         eng.resize();
-        setTimeout(() => eng.resize(), 700);
+        // invalidate + rebuild blur bands so stale blurred-room bands don't cover the scene
+        eng.renderer._blurTop = null;
+        eng.renderer._blurBottom = null;
+        eng.renderer._blurTimer = 0;
+        // double-resize: once for the layer, once after paint
+        requestAnimationFrame(() => { if (eng.renderer) eng.resize(); });
       }
     };
+    if (img.decode) { img.decode().then(apply).catch(() => { img.onload = apply; }); }
+    else { img.onload = apply; }
+    // belt-and-braces: onload always fires when the image is ready
+    img.onload = apply;
   } else if (eng.renderer) {
     eng.renderer.customBackdrop = null;
   }
