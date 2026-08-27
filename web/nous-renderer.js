@@ -410,14 +410,9 @@ const NousRenderer = {
     ctx.textAlign = 'left';
 
     // tilt-shift DOF bands over the static backdrop
-    const band = Math.round(eng.cssH * 0.12);
-    if (this._blurTop) {
-      ctx.drawImage(this._blurTop, 0, 0, eng.cssW, band, 0, 0, eng.cssW, band);
-    }
-    if (this._blurBottom) {
-      const y0 = eng.cssH - band;
-      ctx.drawImage(this._blurBottom, 0, 0, eng.cssW, band, 0, y0, eng.cssW, band);
-    }
+    const band = Math.round(eng.cssH * 0.07);
+    if (this._blurTop) ctx.drawImage(this._blurTop, 0, 0, eng.cssW, band, 0, 0, eng.cssW, band);
+    // bottom band dropped — orbs stay sharp in the foreground
   },
 
   _buildBlurBands(eng) {

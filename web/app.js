@@ -334,7 +334,13 @@ function renderAll() { renderRoster(); renderMetrics(); renderMailboxBadge(); }
 
 function renderRoster() {
   const list = $('roster-list');
-  const agents = [...eng.agents.values()];
+  // dedupe by agent name (multiple sessions can share a name); keep the first
+  const seen = new Set();
+  const agents = [...eng.agents.values()].filter((a) => {
+    if (seen.has(a.name)) return false;
+    seen.add(a.name);
+    return true;
+  });
   $('roster-count').textContent = agents.length;
   $('roster-empty').classList.toggle('hidden', agents.length > 0);
   list.innerHTML = '';

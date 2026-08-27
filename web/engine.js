@@ -143,6 +143,17 @@ class OfficeEngine {
   s(v) { return v * this.scale; }
 
   frame(dt) {
+    // idle agents drift back to their home station (no clustering)
+    for (const a of this.agents.values()) {
+      if ((a.status === 'idle' || a.status === 'entering') && a.home && !a.moving && !a.leaving) {
+        const dx = a.home.x - a.x, dy = a.home.y - a.y;
+        if (Math.hypot(dx, dy) > 0.8) {
+          a.moving = true;
+          a.tx = a.home.x; a.ty = a.home.y;
+          a.walkPhase = a.walkPhase || Math.random() * 10;
+        }
+      }
+    }
     // fps meter
     this._fpsFrames++;
     this._fpsTime += dt;
@@ -158,7 +169,10 @@ class OfficeEngine {
 
   addAgent(a) {
     const ent = this.theme.entrance;
-    const desks = this.theme.desks || [];
+    // home = nearest desk among ALL desk-ish stations (covers office + dunder layouts)
+    const desks = (this.theme.desks || []).length
+      ? this.theme.desks
+      : (this.theme.stations || []).filter(s => s.type === 'desk').map(s => [s.x, s.y]);
     const deskIdx = this._deskCounter++ % Math.max(desks.length, 1);
     const [hx, hy] = desks.length ? desks[deskIdx] : [ent.x, ent.y];
     const ca = {

@@ -317,12 +317,9 @@ const OfficeRenderer = {
     // composite: sharp static center + blurred top/bottom edges
     if (eng.staticLayer) {
       ctx.drawImage(eng.staticLayer, 0, 0);
-      const band = Math.round(eng.cssH * 0.13);
+      const band = Math.round(eng.cssH * 0.07);
       if (this._blurTop) ctx.drawImage(this._blurTop, 0, 0, eng.cssW, band, 0, 0, eng.cssW, band);
-      if (this._blurBottom) {
-        const y0 = eng.cssH - band;
-        ctx.drawImage(this._blurBottom, 0, 0, eng.cssW, band, 0, y0, eng.cssW, band);
-      }
+      // bottom band dropped — agents walk in the foreground; keep it sharp
     }
 
     // mailbox (dynamic glow + flag)
@@ -531,6 +528,28 @@ const OfficeRenderer = {
       ctx.textAlign = 'center';
       ctx.fillText(toolIcon(a.currentTool), c.x, y - 28 * u);
       ctx.textAlign = 'left';
+    }
+    // working indicator: spinning gear above active agents
+    if ((a.status === 'tool' || a.status === 'thinking') && !(a.bubble.text && now < a.bubble.until)) {
+      const gx = c.x, gy = y - 36 * u;
+      const spin = (now * 3) % (Math.PI * 2);
+      ctx.save();
+      ctx.translate(gx, gy);
+      ctx.rotate(spin);
+      ctx.strokeStyle = 'rgba(59,54,48,0.85)';
+      ctx.lineWidth = 1.6 * u;
+      ctx.lineCap = 'round';
+      for (let t = 0; t < 8; t++) {
+        const a0 = (t / 8) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a0) * 3.4 * u, Math.sin(a0) * 3.4 * u);
+        ctx.lineTo(Math.cos(a0) * 5.2 * u, Math.sin(a0) * 5.2 * u);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(0, 0, 2.4 * u, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
     }
     // delivery toss
     if (a.toss > 0) {
@@ -943,7 +962,7 @@ const OfficeRenderer = {
 
   _buildBlurBands(eng) {
     const w = eng.cssW, h = eng.cssH;
-    const band = Math.round(h * 0.13);
+    const band = Math.round(h * 0.07);
     const make = () => {
       const c = document.createElement('canvas');
       c.width = w; c.height = band;
@@ -953,7 +972,7 @@ const OfficeRenderer = {
     const top = make();
     const tg = top.getContext('2d');
     tg.drawImage(eng.staticLayer, 0, 0, w, band, 0, 0, w, band);
-    tg.filter = 'blur(' + Math.max(3, band * 0.16) + 'px)';
+    tg.filter = 'blur(' + Math.max(2, band * 0.12) + 'px)';
     tg.drawImage(eng.staticLayer, 0, 0, w, band, 0, 0, w, band);
     const fadeT = tg.createLinearGradient(0, band * 0.35, 0, band);
     fadeT.addColorStop(0, 'rgba(0,0,0,0)');

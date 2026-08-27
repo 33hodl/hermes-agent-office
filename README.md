@@ -102,6 +102,8 @@ Chewbacca filing reports next to a droid with a lightsaber.
 
 ![Live demo animation](docs/screenshots/demo.gif)
 
+[▶ Watch the 9s promo video](docs/screenshots/promo.mp4)
+
 ## 📦 Install for Hermes users
 
 Paste the repo URL into any Hermes session and say **"install this"** — a

@@ -181,12 +181,9 @@ const DunderRenderer = {
     ctx.textAlign = 'left';
 
     // tilt-shift DOF bands (soften top/bottom edges)
-    const band = Math.round(eng.cssH * 0.11);
+    const band = Math.round(eng.cssH * 0.06);
     if (this._blurTop) ctx.drawImage(this._blurTop, 0, 0, eng.cssW, band, 0, 0, eng.cssW, band);
-    if (this._blurBottom) {
-      const y0 = eng.cssH - band;
-      ctx.drawImage(this._blurBottom, 0, 0, eng.cssW, band, 0, y0, eng.cssW, band);
-    }
+    // bottom band dropped — keep the foreground sharp
   },
 
   _buildBlurBands(eng) {
