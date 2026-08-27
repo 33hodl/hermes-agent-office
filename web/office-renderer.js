@@ -11,7 +11,9 @@ const OfficeRenderer = {
   name: 'office',
 
   init(eng) {
-    this.agentsV = new Map();   // per-agent visual state
+    this.agentsV = new Map();
+    this.sprites = {};   // name -> HTMLImageElement (themed character art)
+    this._loadSprites();
     this.backdrop = null;
     const img = new Image();
     img.src = '/assets/office-backdrop-v3.png';
@@ -25,6 +27,15 @@ const OfficeRenderer = {
         x: Math.random(), y: Math.random(), z: Math.random() * 0.6 + 0.2,
         s: Math.random() * 1.6 + 0.5, p: Math.random() * Math.PI * 2,
       });
+    }
+  },
+
+  _loadSprites() {
+    const names = ['batman', 'robin', 'catwoman', 'joker'];
+    for (const n of names) {
+      const img = new Image();
+      img.src = '/assets/char-' + n + '.png';
+      this.sprites[n] = img;
     }
   },
 
@@ -383,6 +394,13 @@ const OfficeRenderer = {
     const now = performance.now() / 1000;
     const look = a.look || { hue: a.color, body: 'default', topper: 'none', acc: 'none', face: 'calm' };
     const hue = look.hue || a.color;
+    // THEMED SPRITE: if this agent has character art, draw it instead of the capsule
+    const spriteKey = (a.name || '').toLowerCase();
+    const spr = this.sprites[spriteKey];
+    if (spr && spr.complete && spr.naturalWidth > 0) {
+      this.drawSpriteAgent(eng, ctx, a, c, u, spr);
+      return;
+    }
 
     // body proportions per archetype
     const P = {
@@ -565,6 +583,37 @@ const OfficeRenderer = {
       ctx.fillStyle = '#f5f5f0';
       ctx.fillRect(-6 * s, -4 * s, 12 * s, 8 * s);
       ctx.restore();
+    }
+  },
+
+  /* themed character sprite (AI-generated art) */
+  drawSpriteAgent(eng, ctx, a, c, u, img) {
+    const bob = a.moving ? Math.sin(a.walkPhase) * 1.5 * u : Math.sin(a.walkPhase * 0.55) * 0.8 * u;
+    const w = 34 * u, hh = 34 * u;
+    // grounding shadow
+    const sh = ctx.createRadialGradient(c.x, c.y + u * 3, u * 2, c.x, c.y + u * 3, u * 15);
+    sh.addColorStop(0, 'rgba(60,45,25,0.35)');
+    sh.addColorStop(1, 'rgba(60,45,25,0)');
+    ctx.fillStyle = sh;
+    ctx.beginPath();
+    ctx.ellipse(c.x, c.y + u * 3, u * 15, u * 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // draw sprite with slight bob + squash on walk
+    const sq = a.moving ? 0.06 : 0;
+    ctx.save();
+    ctx.translate(c.x, c.y - hh / 2 + bob + u * 6);
+    ctx.scale(1 + sq, 1 - sq);
+    ctx.drawImage(img, -w / 2, -hh / 2, w, hh);
+    ctx.restore();
+    // halo behind on dark themes
+    if (eng.theme && eng.theme.fx && eng.theme.fx.dark) {
+      const halo = ctx.createRadialGradient(c.x, c.y - u * 8, u * 2, c.x, c.y - u * 8, u * 22);
+      halo.addColorStop(0, 'rgba(255,236,190,0.35)');
+      halo.addColorStop(1, 'rgba(255,236,190,0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y - u * 8, u * 22, u * 20, 0, 0, Math.PI * 2);
+      ctx.fill();
     }
   },
 
