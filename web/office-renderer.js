@@ -81,7 +81,7 @@ const OfficeRenderer = {
     for (let x = 0; x < GRID; x++) {
       for (let y = 0; y < GRID; y++) {
         const c = (x + y) % 2 === 0 ? eng.theme.floor.base : eng.theme.floor.alt;
-        this.tile(eng, g, x, y, customBg ? c + 'e0' : c);
+        this.tile(eng, g, x, y, customBg ? c + 'b8' : c);
       }
     }
     g.strokeStyle = eng.theme.floor.grid;
@@ -113,14 +113,14 @@ const OfficeRenderer = {
 
     /* back walls + window with AI art */
     const back = eng.theme.wall.back, side = eng.theme.wall.side;
-    g.fillStyle = customBg ? side + 'e6' : side;
+    g.fillStyle = customBg ? side + 'c6' : side;
     g.beginPath();
     g.moveTo(this.map(eng, 0, 0).x, this.map(eng, 0, 0).y);
     g.lineTo(this.map(eng, GRID, 0).x, this.map(eng, GRID, 0).y);
     g.lineTo(this.map(eng, GRID, 0).x, this.map(eng, GRID, 0).y - eng.s(84));
     g.lineTo(this.map(eng, 0, 0).x, this.map(eng, 0, 0).y - eng.s(84));
     g.closePath(); g.fill();
-    g.fillStyle = customBg ? back + 'e6' : back;
+    g.fillStyle = customBg ? back + 'c6' : back;
     g.beginPath();
     g.moveTo(this.map(eng, GRID, 0).x, this.map(eng, GRID, 0).y);
     g.lineTo(this.map(eng, GRID, GRID).x, this.map(eng, GRID, GRID).y);
