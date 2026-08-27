@@ -136,6 +136,15 @@ class OfficeHandler(BaseHTTPRequestHandler):
             return self._json({"ok": True, "version": __version__, "source": health})
         if path == "/api/state":
             return self._json(self.app.store.snapshot())
+        if path == "/api/events/poll":
+            try:
+                since = int(self.path.split("since=")[1].split("&")[0])
+            except Exception:
+                since = 0
+            batch = self.app.source.events_after(since)
+            if batch:
+                self.app.ingest(batch)
+            return self._json({"since": since, "events": batch})
         if path == "/api/events":
             return self._sse()
         return self._file(path)
@@ -158,6 +167,12 @@ class OfficeHandler(BaseHTTPRequestHandler):
             if ok:
                 return self._json({"ok": True, "url": office_art.cache_url_for(prompt), "cached": False})
             return self._json({"ok": False, "error": msg}, 502)
+        if path == "/api/demo/burst":
+            src = self.app.source
+            if hasattr(src, "burst_task"):
+                src.burst_task()
+                return self._json({"ok": True})
+            return self._json({"ok": False, "error": "burst not supported in live mode — run demo mode"}, 400)
         if path == "/api/demo/names":
             try:
                 length = int(self.headers.get("Content-Length", 0))
@@ -190,6 +205,15 @@ class OfficeHandler(BaseHTTPRequestHandler):
             since = int(self.path.split("since=")[1].split("&")[0])
         except Exception:
             since = 0
+        # visitor / polling mode: close after `limit` events or after idle
+        try:
+            limit = int(self.path.split("limit=")[1].split("&")[0])
+        except Exception:
+            limit = 0
+        try:
+            idle_ms = float(self.path.split("idle=")[1].split("&")[0])
+        except Exception:
+            idle_ms = 0
 
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
@@ -207,7 +231,11 @@ class OfficeHandler(BaseHTTPRequestHandler):
 
         try:
             last = since
+            sent = 0
+            idle_deadline = (time.time() + idle_ms / 1000.0) if idle_ms > 0 else None
             while True:
+                if idle_deadline and time.time() > idle_deadline:
+                    break
                 try:
                     batch = q.get(timeout=SSE_KEEPALIVE)
                 except queue.Empty:
@@ -218,17 +246,103 @@ class OfficeHandler(BaseHTTPRequestHandler):
                     if ev["id"] <= last:
                         continue
                     last = ev["id"]
+                    sent += 1
                     payload = json.dumps(ev)
                     self.wfile.write(f"data: {payload}\n\n".encode())
+                    if limit and sent >= limit:
+                        self.wfile.flush()
+                        return
                 self.wfile.flush()
         except (BrokenPipeError, ConnectionResetError):
             pass
         finally:
             self.app.unsubscribe(q)
+            try:
+                self.wfile.flush()
+            except Exception:
+                pass
 
     def log_message(self, fmt: str, *args):
         # keep the console quiet; logs live in STATUS/terminal only
         pass
+
+
+class VisitorSource:
+    """Polls a REMOTE office instance and forwards its agents as visitors.
+
+    Lets you watch other people's bots (and let them watch yours): run
+    `--visit https://someone.example:8741` and their agents wander in as
+    guests. Read-only client of the remote office's public event stream.
+    """
+
+    name = "visitor"
+
+    def __init__(self, remote: str, poll_interval: float = 2.0):
+        self.remote = remote.rstrip("/")
+        self.poll_interval = poll_interval
+        self._events = []
+        self._lock = threading.Lock()
+        self._next_id = 1
+        self._last_remote_id = 0
+        self._stop = threading.Event()
+        self._thread = None
+        self._last_error = ""
+
+    def start(self):
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def stop(self):
+        self._stop.set()
+
+    def health(self):
+        return {"ok": not self._last_error, "remote": self.remote, "error": self._last_error or None}
+
+    def events_after(self, since_id):
+        with self._lock:
+            return [e for e in self._events if e["id"] > since_id]
+
+    def latest_id(self):
+        with self._lock:
+            return self._events[-1]["id"] if self._events else 0
+
+    def wait_ready(self, timeout=15.0):
+        t0 = time.time()
+        while time.time() - t0 < timeout:
+            if not self._last_error and self._events:
+                return True
+            if self._stop.is_set():
+                return False
+            time.sleep(0.2)
+        return bool(self._events)
+
+    def _emit(self, **fields):
+        ev = {"id": self._next_id, "ts": time.time(), "visitor": True}
+        self._next_id += 1
+        ev.update(fields)
+        with self._lock:
+            self._events.append(ev)
+
+    def _run(self):
+        import urllib.request as urlreq
+        while not self._stop.is_set():
+            try:
+                url = f"{self.remote}/api/events/poll?since={self._last_remote_id}"
+                with urlreq.urlopen(url, timeout=8) as r:
+                    payload = json.loads(r.read().decode("utf-8", "replace"))
+                for ev in payload.get("events", []):
+                    if ev.get("id", 0) <= self._last_remote_id:
+                        continue
+                    self._last_remote_id = ev["id"]
+                    self._emit(type=ev.get("type", "status"), agent=ev.get("agent", "Guest"),
+                               session=ev.get("session", ""), role=ev.get("role", "guest"),
+                               tool=ev.get("tool"), text=ev.get("text"),
+                               task=ev.get("task"), title=ev.get("title"),
+                               content=ev.get("content"), tokens=ev.get("tokens") or {})
+                self._last_error = ""
+            except Exception as exc:
+                self._last_error = str(exc)[:200]
+            self._stop.wait(self.poll_interval)
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -238,6 +352,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--port", type=int, default=8741)
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--seed", type=int, default=None, help="demo RNG seed")
+    ap.add_argument("--visit", metavar="URL", help="watch another office instance's agents as visitors")
     ap.add_argument("--interval", type=float, default=0.35, help="demo event interval")
     ap.add_argument("--poll", type=float, default=1.0, help="db poll interval (s)")
     ap.add_argument("--version", action="version", version=f"hermes-office {__version__}")
@@ -245,6 +360,8 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if args.db:
         source = HermesDBSource(db_path=args.db, poll_interval=args.poll)
+    elif args.visit:
+        source = VisitorSource(remote=args.visit, poll_interval=args.poll)
     else:
         source = DemoSource(seed=args.seed, interval=args.interval)
 
@@ -265,11 +382,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     handler = OfficeHandler
     handler.app = app
     httpd = ThreadingHTTPServer((args.host, args.port), handler)
-    mode = "live" if args.db else "demo"
+    mode = "live" if args.db else ("visit" if args.visit else "demo")
     print(f"Hermes Agent Office v{__version__} ({mode} mode)")
     print(f"  → http://{args.host}:{args.port}")
     if args.db:
         print(f"  → watching {args.db}")
+    elif args.visit:
+        print(f"  → watching visitors from {args.visit}")
     else:
         print("  → synthetic demo feed (use --db ~/.hermes/state.db for live)")
     try:

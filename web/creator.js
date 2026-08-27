@@ -65,6 +65,7 @@
 
         const opts = {
           franchise: f,
+          franchiseId: sel.value,
           name,
           emoji: f.emoji,
           agentNames: names.length ? names : f.names,

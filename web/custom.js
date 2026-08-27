@@ -13,7 +13,7 @@
  * Franchise presets — names, stations, palette hints, backdrop prompt *
  * ------------------------------------------------------------------ */
 const FRANCHISES = {
-  batman: {
+  batman: { _id: 'batman',
     label: 'Batman',
     emoji: '🦇',
     prompt: 'Gothic noir Gotham City skyscraper rooftop at night, dramatic moonlight, bat-signal glow in the clouds, art-deco gargoyles, rain-slicked rooftops, moody purple and teal rim lighting, cinematic comic-book background art, no people, no text',
@@ -34,7 +34,7 @@ const FRANCHISES = {
                mail: '#8b5cf6', mailDark: '#6d3fd0', rug: 'rgba(139,92,246,0.16)' },
     fx: { dark: true, trails: false, scanlines: false, glow: true },
   },
-  starwars: {
+  starwars: { _id: 'starwars',
     label: 'Star Wars',
     emoji: '🚀',
     prompt: 'Star Wars style interior of a starship hangar bay on a space station, tall metal walls with glowing panels, droids and cargo crates, holographic tables, warm accent lights against cool metal, cinematic concept art, no people, no text',
@@ -55,7 +55,7 @@ const FRANCHISES = {
                mail: '#e8b84b', mailDark: '#b88f2e', rug: 'rgba(127,215,232,0.14)' },
     fx: { dark: true, trails: false, scanlines: false, glow: true },
   },
-  ghibli: {
+  ghibli: { _id: 'ghibli',
     label: 'Studio Ghibli',
     emoji: '🌿',
     prompt: 'Studio Ghibli style cozy countryside workshop interior, warm sunlight through large windows, wooden furniture, plants and hanging dried herbs, whimsical hand-painted background art, soft pastel colors, peaceful atmosphere, no people, no text',
@@ -76,7 +76,7 @@ const FRANCHISES = {
                mail: '#6f9d5e', mailDark: '#4f7a44', rug: 'rgba(111,157,94,0.20)' },
     fx: { dark: false, trails: false, scanlines: false, glow: false },
   },
-  spiderman: {
+  spiderman: { _id: 'spiderman',
     label: 'Spider-Man',
     emoji: '🕸️',
     prompt: 'Bright comic-book style New York City rooftop at sunset, distant skyline, red and blue web patterns, dynamic comic art with halftone dots, vibrant colors, no people, no text',
@@ -97,7 +97,7 @@ const FRANCHISES = {
                mail: '#c0392b', mailDark: '#8e2a1e', rug: 'rgba(192,57,43,0.12)' },
     fx: { dark: false, trails: false, scanlines: false, glow: false },
   },
-  avatar: {
+  avatar: { _id: 'avatar',
     label: 'Avatar',
     emoji: '🌊',
     prompt: 'Pandora style floating mountains at dusk, bioluminescent alien plants glowing blue and teal, waterfalls, lush alien rainforest, ethereal cinematic background art, no people, no text',
@@ -118,7 +118,7 @@ const FRANCHISES = {
                mail: '#4fc3b2', mailDark: '#2f9488', rug: 'rgba(79,195,178,0.16)' },
     fx: { dark: true, trails: true, scanlines: false, glow: true },
   },
-  office: {
+  office: { _id: 'office',
     label: 'The Office (US)',
     emoji: '📎',
     prompt: 'Flat 2D cartoon illustration of a cozy early-2000s American paper company office, warm beige walls, gray-blue carpet, cubicles, reception desk, conference room, break room with vending machine, hand-drawn sitcom style, no people, no text',
@@ -140,7 +140,7 @@ const FRANCHISES = {
                mail: '#c07c2b', mailDark: '#8e5a1a', rug: 'rgba(192,124,43,0.12)' },
     fx: { dark: false, trails: false, scanlines: false, glow: false },
   },
-  cyberpunk: {
+  cyberpunk: { _id: 'cyberpunk',
     label: 'Cyberpunk',
     emoji: '🌆',
     prompt: 'Cyberpunk 2077 style neon-drenched city street at night, holographic billboards, rain reflections, magenta and cyan neon, dense futuristic buildings, cinematic game key art, no people, no text',
@@ -179,6 +179,7 @@ const DEFAULT_STATION_DEFS = [
  * ------------------------------------------------------------------ */
 function buildCustomTheme(opts) {
   const f = opts.franchise || FRANCHISES.office;
+  const franchiseId = opts.franchiseId || f._id || 'generic';
   const pal = Object.assign({}, f.palette, opts.palette || {});
   const name = (opts.name || f.label).trim() || f.label;
   const slug = 'custom-' + hashCode(name + Date.now()).toString(36);
@@ -217,6 +218,7 @@ function buildCustomTheme(opts) {
     backdrop: opts.backdrop || null,          // image URL (server-generated)
     agentNames: opts.agentNames || f.names || [],
     isCustom: true,
+    franchiseId,
   };
 }
 
@@ -229,4 +231,117 @@ function isDarkColor(hex) {
 function themeToThemeConfig(t) {
   // a custom theme object is already in THEMES shape (plus extras)
   return t;
+}
+
+
+/* ------------------------------------------------------------------ *
+ * Character archetype system — every agent is visually DISTINCT.
+ * Identity = body hue + head topper silhouette + one accessory + body
+ * proportions, per the art-direction spec (readable at 40px, from
+ * behind, in motion). The identity hue binds across canvas, roster dot,
+ * avatar tile and mail accent.
+ * ------------------------------------------------------------------ */
+const CAST = {
+  batman: {
+    Batman:   { hue:'#3a3f55', body:'tall',   topper:'batears', tc:'#3a3f55', acc:'cape',  face:'stern' },
+    Robin:    { hue:'#d64541', body:'slim',   topper:'maskhair', tc:'#2e2a28', acc:'staff', face:'calm' },
+    Catwoman: { hue:'#4a4559', body:'slim',   topper:'catears', tc:'#4a4559', acc:'whip',  face:'calm' },
+    Joker:    { hue:'#8a5f9e', body:'lanky',  topper:'hair', tc:'#7cb342', acc:'card',   face:'grin' },
+    Bane:     { hue:'#7a6a4d', body:'wide',   topper:'mask',  tc:'#4a3d2a', acc:'none',   face:'stern' },
+    Nightwing:{ hue:'#4a7bb0', body:'slim',   topper:'hair',  tc:'#2e2a28', acc:'staff',  face:'calm' },
+    Batgirl:  { hue:'#d64541', body:'slim',   topper:'catears', tc:'#2e2a28', acc:'cape', face:'calm' },
+    Alfred:   { hue:'#b8b2a6', body:'default',topper:'none',  tc:'#6b6aua'.replace('ua','4a'), acc:'collar', face:'calm' },
+    Riddler:  { hue:'#5d8a4a', body:'default',topper:'hat',   tc:'#3a4a2e', acc:'card',   face:'calm' },
+    'Harley Quinn': { hue:'#d6459a', body:'slim', topper:'bob', tc:'#2e2a28', acc:'staff', face:'grin' },
+  },
+  starwars: { _id: 'starwars',
+    Luke:      { hue:'#c9b99a', body:'default', topper:'hair', tc:'#6b4a2a', acc:'lightsaber', face:'calm' },
+    Leia:      { hue:'#c9b99a', body:'slim',    topper:'buns', tc:'#6b4a2a', acc:'none', face:'calm' },
+    Han:       { hue:'#c9b99a', body:'default', topper:'hair', tc:'#3a2e24', acc:'collar', face:'calm' },
+    Chewbacca: { hue:'#8a6a3a', body:'wide',    topper:'fur',  tc:'#8a6a3a', acc:'none', face:'calm' },
+    'R2-D2':   { hue:'#9db8d8', body:'droid',   topper:'dome', tc:'#d8e4f0', acc:'none', face:'none' },
+    'C-3PO':   { hue:'#d8a84a', body:'gold',    topper:'dome', tc:'#d8a84a', acc:'none', face:'none' },
+    'Obi-Wan': { hue:'#c9b99a', body:'tall',    topper:'hair', tc:'#8a8a8a', acc:'lightsaber', face:'calm' },
+    'Darth Vader': { hue:'#3a3a42', body:'tall', topper:'helmet', tc:'#2e2e36', acc:'lightsaber', face:'stern' },
+    Yoda:      { hue:'#7a9a5a', body:'small',   topper:'ears', tc:'#7a9a5a', acc:'staff', face:'calm' },
+    Lando:     { hue:'#c9b99a', body:'default', topper:'hair', tc:'#2e241e', acc:'collar', face:'calm' },
+  },
+  ghibli: { _id: 'ghibli',
+    Totoro:  { hue:'#8a8a9a', body:'wide',  topper:'ears', tc:'#8a8a9a', acc:'leaf',  face:'calm' },
+    Chihiro: { hue:'#d68a9a', body:'slim',  topper:'hair', tc:'#5a3a2a', acc:'none',  face:'calm' },
+    Haku:    { hue:'#6a9ac0', body:'slim',  topper:'hair', tc:'#2e4a5a', acc:'none',  face:'calm' },
+    Kiki:    { hue:'#5a5a8a', body:'slim',  topper:'bob',  tc:'#2e2a3a', acc:'bow',   face:'calm' },
+    Ponyo:   { hue:'#e8909a', body:'small', topper:'hair', tc:'#c84a4a', acc:'none',  face:'grin' },
+    Howl:    { hue:'#c8b090', body:'tall',  topper:'hair', tc:'#3a2e1e', acc:'collar',face:'calm' },
+    Calcifer:{ hue:'#e8a84a', body:'small', topper:'flame',tc:'#e85a2a', acc:'none',  face:'grin' },
+    Mononoke:{ hue:'#b06050', body:'tall',  topper:'ears', tc:'#e8d8c8', acc:'mask',  face:'stern' },
+    'No-Face':{ hue:'#3a3a42', body:'tall', topper:'mask', tc:'#3a3a42', acc:'none',  face:'none' },
+    Jiji:    { hue:'#3a3a42', body:'small', topper:'catears', tc:'#3a3a42', acc:'bow', face:'calm' },
+  },
+  spiderman: { _id: 'spiderman',
+    Peter:   { hue:'#d64541', body:'slim',  topper:'hair', tc:'#3a2e24', acc:'mask',  face:'calm' },
+    Miles:   { hue:'#3a3a42', body:'slim',  topper:'hair', tc:'#2e241e', acc:'mask',  face:'calm' },
+    Gwen:    { hue:'#d8d8e8', body:'slim',  topper:'hair', tc:'#e8b8c8', acc:'mask',  face:'calm' },
+    'Aunt May':{ hue:'#b8a88a', body:'default', topper:'bun', tc:'#8a8a8a', acc:'none', face:'calm' },
+    MJ:      { hue:'#c88a6a', body:'slim',  topper:'hair', tc:'#8a3a2a', acc:'none',  face:'calm' },
+    Ned:     { hue:'#c8a868', body:'round', topper:'hair', tc:'#3a2e1e', acc:'none',  face:'calm' },
+    Venom:   { hue:'#2e2e3a', body:'wide',  topper:'none', tc:'#2e2e3a', acc:'none',  face:'grin' },
+    'Doc Ock':{ hue:'#7a8a9a', body:'default', topper:'bald', tc:'#7a8a9a', acc:'arms', face:'stern' },
+    'Green Goblin': { hue:'#7a9a4a', body:'default', topper:'hat', tc:'#4a5a2e', acc:'glider', face:'grin' },
+    Kingpin: { hue:'#e8e0d0', body:'wide', topper:'bald', tc:'#e8e0d0', acc:'cane',  face:'stern' },
+  },
+  avatar: { _id: 'avatar',
+    Jake:    { hue:'#7a9ac0', body:'tall',  topper:'hair', tc:'#3a2e24', acc:'none',  face:'calm' },
+    Neytiri:{ hue:'#5a8ad0', body:'tall',  topper:'ears', tc:'#2e4a7a', acc:'none',  face:'calm' },
+    Kiri:    { hue:'#5a8ad0', body:'slim',  topper:'ears', tc:'#2e4a7a', acc:'none',  face:'calm' },
+    Loak:    { hue:'#5a8ad0', body:'wide',  topper:'ears', tc:'#2e4a7a', acc:'none',  face:'calm' },
+    Tuk:     { hue:'#5a8ad0', body:'small', topper:'ears', tc:'#2e4a7a', acc:'none',  face:'grin' },
+    Neteyam: { hue:'#5a8ad0', body:'tall',  topper:'ears', tc:'#2e4a7a', acc:'none',  face:'calm' },
+    "Mo'at": { hue:'#4a7ab8', body:'default', topper:'ears', tc:'#8a8a8a', acc:'collar', face:'calm' },
+    "Tsu'tey":{ hue:'#4a6aa8', body:'wide', topper:'ears', tc:'#2e4a7a', acc:'none',  face:'stern' },
+    Quaritch:{ hue:'#8a6a5a', body:'wide',  topper:'hair', tc:'#2e241e', acc:'none',  face:'stern' },
+    Norm:    { hue:'#9aa8b8', body:'default', topper:'hair', tc:'#3a2e24', acc:'glasses', face:'calm' },
+  },
+  office: { _id: 'office',
+    Michael:{ hue:'#c8a84a', body:'default', topper:'hair', tc:'#3a2e1e', acc:'mug',  face:'calm' },
+    Dwight: { hue:'#b8a86a', body:'default', topper:'hair', tc:'#4a3a1e', acc:'beet', face:'stern' },
+    Jim:    { hue:'#7a9ac0', body:'tall',    topper:'hair', tc:'#3a2e24', acc:'coffee', face:'calm' },
+    Pam:    { hue:'#c8a8b8', body:'slim',    topper:'hair', tc:'#7a4a3a', acc:'none',  face:'calm' },
+    Angela: { hue:'#b8c8a0', body:'small',   topper:'bun',  tc:'#5a4a2e', acc:'cat',   face:'stern' },
+    Oscar:  { hue:'#c8b090', body:'slim',    topper:'bald', tc:'#c8b090', acc:'none',  face:'calm' },
+    Kevin:  { hue:'#d0c0a8', body:'round',   topper:'hair', tc:'#4a3a2a', acc:'chili', face:'calm' },
+    Stanley:{ hue:'#8a6a4a', body:'round',   topper:'bald', tc:'#8a6a4a', acc:'crossword', face:'stern' },
+    Phyllis:{ hue:'#c0a0b0', body:'round',   topper:'hair', tc:'#8a6a6a', acc:'none',  face:'calm' },
+    Creed:  { hue:'#9aa8a0', body:'lanky',   topper:'hair', tc:'#8a8a8a', acc:'none',  face:'grin' },
+  },
+  cyberpunk: { _id: 'cyberpunk',
+    V:       { hue:'#d8a84a', body:'slim',  topper:'hair', tc:'#3a2e1e', acc:'chrome', face:'calm' },
+    Johnny:  { hue:'#8a9ab8', body:'default', topper:'hair', tc:'#c8c8d0', acc:'chrome', face:'stern' },
+    Judy:    { hue:'#e8a0a0', body:'slim',  topper:'hair', tc:'#2e2a3a', acc:'none',  face:'calm' },
+    Panam:   { hue:'#c8704a', body:'slim',  topper:'hair', tc:'#5a2e1e', acc:'none',  face:'calm' },
+    River:   { hue:'#a0886a', body:'wide',  topper:'hair', tc:'#2e241e', acc:'none',  face:'calm' },
+    Takemura:{ hue:'#8a8a9a', body:'default', topper:'bald', tc:'#8a8a9a', acc:'collar', face:'stern' },
+    Rogue:   { hue:'#b8685a', body:'slim',  topper:'hair', tc:'#5a2e24', acc:'chrome', face:'stern' },
+    Jackie:  { hue:'#9a8a6a', body:'wide',  topper:'hair', tc:'#2e241e', acc:'none',  face:'grin' },
+    Misty:   { hue:'#d8b8a0', body:'slim',  topper:'hair', tc:'#4a2e2a', acc:'none',  face:'calm' },
+    Kerry:   { hue:'#a89ab8', body:'default', topper:'hair', tc:'#2e2a3a', acc:'chrome', face:'calm' },
+  },
+};
+
+const GENERIC_LOOKS = [
+  { hue:'#f2a38f', topper:'catears', acc:'none' },
+  { hue:'#7ec8c0', topper:'ears',    acc:'coffee' },
+  { hue:'#a8c89a', topper:'bun',     acc:'none' },
+  { hue:'#f2cf78', topper:'cap',     acc:'book' },
+  { hue:'#c39ad8', topper:'horns',   acc:'none' },
+  { hue:'#8fb7e8', topper:'headphones', acc:'none' },
+  { hue:'#e8a0b8', topper:'bob',     acc:'bow' },
+  { hue:'#e8d5a0', topper:'hair',    acc:'mug' },
+];
+
+function castLook(name, franchiseId) {
+  const cast = CAST[franchiseId];
+  if (cast && cast[name]) return Object.assign({ body:'default', face:'calm' }, cast[name]);
+  const g = GENERIC_LOOKS[hashCode(name || '') % GENERIC_LOOKS.length];
+  return Object.assign({ body:'default', face:'calm' }, g);
 }

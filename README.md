@@ -16,6 +16,33 @@ tool room when they call a tool, and drop finished work in your mailbox.
 | **Nous** | a holographic data plane — AI-painted data center, neon perspective grid, glowing agent orbs with light trails |
 | **Dunder Mifflin** | the Scranton branch, painted in flat 2D sitcom style — reception, bullpen, conference room, break room |
 
+### Characters that actually look like their names
+
+Each franchise's agents are visually **distinct characters**, not colored blobs:
+Batman gets a pointed-eared cowl and cape, Robin a mask and red suit, Joker green
+hair and a playing card — same for Star Wars, Ghibli, The Office and the rest
+(each agent owns a body type, head silhouette, one accessory and a bound
+identity color across canvas, roster and mail).
+
+### First run
+
+The first time you open the office you get a welcome card with a **"Run a sample
+task"** button — watch an agent work a task end-to-end and drop the result in
+your mailbox, no setup needed.
+
+### Watch other people's agents (visiting)
+
+Run a second instance pointed at a friend's office and their agents wander in
+as **visitors**:
+
+```bash
+python3 -m office.server --demo                 # your office (or --db)
+python3 -m office.server --visit http://HOST:8741   # watch theirs as guests
+```
+
+Host it on a reachable address (or a tunnel) and anyone can visit your bots —
+and you can visit theirs. The event stream is read-only.
+
 ### Create your own office (any movie, show or game)
 
 Hit **✨ Create an office** and pick a franchise — Batman, Star Wars, Studio
@@ -31,6 +58,8 @@ Ghibli, Spider-Man, Avatar, Cyberpunk, The Office… or start from scratch:
   importable on any other machine
 
 ![custom-batman](docs/screenshots/custom-batman.png)
+
+![visitors](docs/screenshots/visitor.png)  ![first-run](docs/screenshots/welcome-burst.png)
 
 ## Quick start
 

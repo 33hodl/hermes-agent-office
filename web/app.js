@@ -228,16 +228,40 @@ function handleEvent(ev) {
 }
 
 function agentFromStore(ev) {
+  const name = ev.agent || 'Agent';
+  const look = castLook(name, (eng.theme && eng.theme.franchiseId) || null);
   return {
     id: ev.agent_id || ev.session || ('a' + Math.random().toString(36).slice(2)),
-    name: ev.agent || 'Agent',
-    color: colorFor(ev.agent || 'Agent', eng.theme.name),
+    name,
+    color: look.hue || colorFor(name, eng.theme.name),
+    visitor: !!ev.visitor,
+    look,
     role: ev.role || 'agent',
     model: ev.model || '',
     status: 'entering',
     activity: 'Arriving at the office',
     task: '', tokens: { input: 0, output: 0 }, tools: [], steps: [],
   };
+}
+
+/* reassign archetype looks to every live agent when the theme changes */
+function relookAgents() {
+  const fid = (eng.theme && eng.theme.franchiseId) || null;
+  const darkTheme = !!(eng.theme && eng.theme.fx && eng.theme.fx.dark);
+  for (const a of eng.agents.values()) {
+    a.look = castLook(a.name, fid);
+    a.look.hue = darkTheme ? liftDark(a.look.hue || a.color) : (a.look.hue || a.color);
+    a.color = a.look.hue;
+  }
+}
+/* on dark themes, keep very dark character hues readable (no camouflage) */
+function liftDark(hex) {
+  const n = parseInt((hex || '#888888').slice(1), 16);
+  const lum = (((n >> 16) & 255) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000;
+  if (lum >= 92) return hex;
+  const f = 1 + (110 - lum) / lum;
+  const c = (v) => clamp(Math.round(v * f), 0, 255);
+  return `rgb(${c((n >> 16) & 255)},${c((n >> 8) & 255)},${c(n & 255)})`;
 }
 
 /* ============================== SSE / API ============================== */
@@ -297,7 +321,7 @@ function renderRoster() {
     li.innerHTML = `
       <span class="dot" style="background:${esc(a.color)}"></span>
       <span class="r-info">
-        <span class="r-name">${esc(a.name)}</span>
+        <span class="r-name">${esc(a.name)}${a.visitor ? ' <span class="visitor-chip">visiting</span>' : ''}</span>
         <span class="r-status">${esc(a.activity || '')}</span>
       </span>
       <span class="r-state ${esc(a.status)}">${esc(a.status)}</span>`;
@@ -378,6 +402,14 @@ function openAgentModal(id) {
     tools.appendChild(chip);
   }
   if (!a.tools || !a.tools.length) tools.innerHTML = '<span class="chip">no tools used yet</span>';
+  // live log: recent deliveries by this agent
+  const log = $('am-log');
+  if (log) {
+    const recent = store.deliveries.filter(d => d.agent === a.name).slice(0, 4);
+    log.innerHTML = recent.length
+      ? recent.map(d => `<div class="log-row"><span class="log-when">${timeAgo(d.ts)}</span>${esc(short(d.title))}</div>`).join('')
+      : '<div class="log-row dim">No deliveries yet — they land in the mailbox.</div>';
+  }
   openModal('agent-modal');
 }
 
@@ -515,7 +547,7 @@ function applyTheme(name) {
   } else if (eng.renderer) {
     eng.renderer.customBackdrop = null;
   }
-  for (const a of eng.agents.values()) a.color = colorFor(a.name, name);
+  relookAgents();
   localStorage.setItem('office-theme', name);
   $('brand-mark').textContent = theme.brand || '🏢';
   for (const btn of document.querySelectorAll('.theme-btn')) {
@@ -611,6 +643,23 @@ function boot() {
   });
 
   $('mailbox-btn').addEventListener('click', openMailbox);
+  // first-run welcome + sample task
+  const welcome = document.getElementById('welcome');
+  if (welcome && !localStorage.getItem('office-welcome-seen')) {
+    welcome.classList.remove('hidden');
+    localStorage.setItem('office-welcome-seen', '1');
+    document.getElementById('welcome-close').addEventListener('click', () => welcome.classList.add('hidden'));
+    document.getElementById('welcome-demo').addEventListener('click', async () => {
+      welcome.classList.add('hidden');
+      try {
+        await fetch('/api/demo/burst', { method: 'POST' });
+        toast('Sample task started', 'Watch your agent run it end to end', '#d96f4a');
+      } catch (e) {
+        toast('Sample task needs demo mode', 'Run the server with --demo first', '#c0504d');
+      }
+    });
+  }
+
   const cb = document.getElementById('creator-btn');
   if (cb) {
     cb.addEventListener('click', () => {

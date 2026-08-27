@@ -114,6 +114,38 @@ class DemoSource:
                        text="Reassigned to a new role")
         self._agent_state.clear()
 
+    def burst_task(self) -> None:
+        """Fast scripted task so a new user sees the office in action."""
+        names = self._name_pool or AGENT_NAMES[:4]
+        name = names[0]
+        if name not in self._agent_state:
+            self._new_agent()
+        st = self._agent_state.get(name, {"role": "telegram", "session": f"demo-{name.lower()}", "task": "", "tools": []})
+        task = "Find the cheapest verified flights to Tokyo and summarize the top pick"
+        st["task"] = task
+        tools = ["web_search", "web_extract", "web_search"]
+        self._emit(type="thinking", agent=name, session=st["session"], role=st["role"],
+                   text="Understanding the request…", task=task,
+                   tokens=self._tokens(400, 150))
+        self._emit(type="tool_call", agent=name, session=st["session"], role=st["role"],
+                   tool="web_search", task=task, tokens=self._tokens(900, 220))
+        self._emit(type="status", agent=name, session=st["session"], role=st["role"],
+                   text="Got results from web_search — narrowing down the best option", task=task,
+                   tokens=self._tokens(500, 180))
+        self._emit(type="tool_call", agent=name, session=st["session"], role=st["role"],
+                   tool="web_extract", task=task, tokens=self._tokens(1200, 260))
+        self._emit(type="thinking", agent=name, session=st["session"], role=st["role"],
+                   text="Writing up the deliverable…", task=task,
+                   tokens=self._tokens(300, 120))
+        self._emit(type="delivery", agent=name, session=st["session"], role=st["role"],
+                   title=task,
+                   content="Done! Cheapest verified round-trip found: $640 via Singapore Airlines, "
+                           "including fees. Full itinerary and alternatives are in this delivery.\n\n— "
+                           f"{name} ({st['role']} agent)",
+                   task=task, tokens=self._tokens(600, 900))
+        self._emit(type="idle", agent=name, session=st["session"], role=st["role"],
+                   text="Waiting at desk for your next prompt")
+
     def _new_agent(self) -> str:
         if self._name_pool:
             name = self._name_pool[self._name_pool_i % len(self._name_pool)]
@@ -129,12 +161,18 @@ class DemoSource:
         return name
 
     def _run(self):
-        # opening scene: a few agents stroll in
+        # opening scene: a few agents stroll in fast (no stuck ENTERING)
         opening = ["Aria", "Bento", "Coco", "Dash"]
         for name in opening:
             self._new_agent()
-            time.sleep(self.interval * 2)
-        time.sleep(self.interval * 4)
+            time.sleep(self.interval)
+        time.sleep(self.interval * 2)
+        for name in opening:
+            if name in self._agent_state:
+                self._emit(type="idle", agent=name,
+                           session=self._agent_state[name].get("session", ""),
+                           role=self._agent_state[name].get("role", ""),
+                           text="Waiting at desk for your next prompt")
 
         while not self._stop.is_set():
             # spawn a new agent occasionally

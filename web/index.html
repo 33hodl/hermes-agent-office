@@ -79,6 +79,20 @@
 
   <div id="toasts"></div>
 
+  <!-- First-run welcome -->
+  <div id="welcome" class="welcome hidden">
+    <div class="welcome-card">
+      <div class="welcome-title">👋 Welcome to Hermes Agent Office</div>
+      <div class="welcome-text">Your agents are moving in. Watch them work — and when they finish a task,
+        the result lands in your mailbox.</div>
+      <div class="welcome-actions">
+        <button id="welcome-demo" class="creator-build">▶ Run a sample task</button>
+        <button id="welcome-close" class="creator-ghost">Just watch</button>
+      </div>
+      <div class="welcome-hint">Tip: hit <b>✨ Create an office</b> to build a themed office from any movie or show.</div>
+    </div>
+  </div>
+
   <!-- Custom office creator -->
   <div id="creator-root"></div>
 
@@ -105,6 +119,8 @@
       <ol class="steps" id="am-steps"></ol>
       <div class="agent-section-title">Loadout</div>
       <div class="chips" id="am-tools"></div>
+      <div class="agent-section-title">Recent deliveries</div>
+      <div id="am-log" class="agent-log"></div>
     </div>
   </div>
 
