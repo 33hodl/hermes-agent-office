@@ -15,3 +15,15 @@ ESTIMATED TOTAL: ~$0.32 / $50.00 (4 backdrop generations @ ~$0.08)
 2026-08-26  custom theme art (google/gemini-3-pro-image)  ~$0.08 est  custom-ac22516c8df1ddf8.png
 # 2026-08-27  media refresh (gif/screenshots) — free local tooling
 # 2026-08-27  glassmorphism + depth fixes + media — free local tooling
+
+# ============================================================
+# HONEST RECONSTRUCTION (2026-08-27) — actual paid Nous Portal calls
+# 5 image generations (google/gemini-3-pro-image) @ ~$0.08  = $0.40
+# 2 claude-opus-5-fast vision reviews                       = ~$1.20
+# 12 gemini-pro-latest vision QA reviews                    = ~$2.40
+# ------------------------------------------------------------
+# ESTIMATED ACTUAL TOTAL: ~$4.00 (rounded up for safety: $5.00)
+# Budget: $50.00 | Remaining: ~$45-46
+# Note: exact billing lives in the Nous Portal dashboard;
+# this is a conservative reconstruction from call history.
+# ============================================================
