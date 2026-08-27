@@ -224,6 +224,25 @@ let lastDeliveryToast = 0;
 
 /* ============================== events -> engine ============================== */
 
+// in-character flavor (themes with recognizable casts say their lines)
+  const FLAVOR_LINES = {
+    michael: ["That's what she said.", "I'm not superstitious, but I am a little stitious.", "Would I rather be feared or loved? Easy. Both."],
+    dwight: ["Bears. Beets. Battlestar Galactica.", "False.", "Schrute bucks awarded.", "I am ready for the zombie apocalypse."],
+    jim: ["*looks at camera*", "Dwight, that's not a real thing.", "Pam, you up for a prank?"],
+    pam: ["Jim, stop it.", "I'm fine. It's fine.", "Another Dundie for Michael..."],
+    kevin: ["Kevin's famous chili is ready.", "Are we having pretzel day?"],
+    angela: ["The cats need feeding.", "That is unprofessional.", "Mose, no."],
+    batman: ["I'm the night.", "Justice.", "The bat-signal... they need me."],
+    joker: ["Why so serious?", "It's not about the money...", "Madness is the emergency exit."],
+    luke: ["The Force is with me.", "I have a bad feeling about this."],
+    han: ["I've got a bad feeling about this.", "Never tell me the odds.", "Kid, I've flown from one side of this galaxy..."],
+    chewbacca: ["RRRAAARGH!", "RRrrrgh.", "Grrrrawr."],
+  };
+  function flavorFor(name) {
+    const lines = FLAVOR_LINES[(name || '').toLowerCase()];
+    return lines ? lines[Math.floor(Math.random() * lines.length)] : null;
+  }
+
 function handleEvent(ev) {
   store.lastEventId = Math.max(store.lastEventId, ev.id);
   let a = eng.agents.get(ev.agent_id);
@@ -804,25 +823,7 @@ function restoreCustomThemes() {
 
 function boot() {
   eng = new OfficeEngine($('stage'));
-    // in-character flavor (themes with recognizable casts say their lines)
-  const FLAVOR_LINES = {
-    michael: ["That's what she said.", "I'm not superstitious, but I am a little stitious.", "Would I rather be feared or loved? Easy. Both."],
-    dwight: ["Bears. Beets. Battlestar Galactica.", "False.", "Schrute bucks awarded.", "I am ready for the zombie apocalypse."],
-    jim: ["*looks at camera*", "Dwight, that's not a real thing.", "Pam, you up for a prank?"],
-    pam: ["Jim, stop it.", "I'm fine. It's fine.", "Another Dundie for Michael..."],
-    kevin: ["Kevin's famous chili is ready.", "Are we having pretzel day?"],
-    angela: ["The cats need feeding.", "That is unprofessional.", "Mose, no."],
-    batman: ["I'm the night.", "Justice.", "The bat-signal... they need me."],
-    joker: ["Why so serious?", "It's not about the money...", "Madness is the emergency exit."],
-    luke: ["The Force is with me.", "I have a bad feeling about this."],
-    han: ["I've got a bad feeling about this.", "Never tell me the odds.", "Kid, I've flown from one side of this galaxy..."],
-    chewbacca: ["RRRAAARGH!", "RRrrrgh.", "Grrrrawr."],
-  };
-  function flavorFor(name) {
-    const lines = FLAVOR_LINES[(name || '').toLowerCase()];
-    return lines ? lines[Math.floor(Math.random() * lines.length)] : null;
-  }
-window.__eng = eng;
+  window.__eng = eng;
   // visible version badge so users can confirm they're on the latest build
   const demoTag = document.getElementById('source-badge');
   if (demoTag && !document.querySelector('.ver-badge')) {
