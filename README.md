@@ -24,7 +24,7 @@ installable as a PWA.
 
 **🏢 Office** — the cozy isometric pastel diorama that started the trend.
 
-![Office theme](docs/screenshots/office-v2.png)
+![Office theme](docs/screenshots/office-v3.png)
 
 **◈ Nous** — a holographic data plane: neon grid, glowing orbs, a cinematic server-room backdrop.
 
@@ -32,16 +32,16 @@ installable as a PWA.
 
 **📎 Dunder Mifflin** — flat 2D cartoon sitcom set straight out of Scranton.
 
-![Dunder Mifflin theme](docs/screenshots/dunder-v2.png)
+![Dunder Mifflin theme](docs/screenshots/dunder-v3.png)
 
 **🦇 Batman** — a Gotham rooftop with the bat-signal; Batman, Robin,
 Catwoman and Joker work the bullpen.
 
-![Batman theme](docs/screenshots/custom-batman-v2.png)
+![Batman theme](docs/screenshots/batman-v3.png)
 
 **🚀 Star Wars** — a starship hangar with Luke, Leia, Han and Chewbacca on shift.
 
-![Star Wars theme](docs/screenshots/custom-starwars-v2.png)
+![Star Wars theme](docs/screenshots/starwars-v3.png)
 
 > Every agent is a **distinct character** — body type, head silhouette, and one
 > accessory each (cowl, cape, lightsaber, mug, playing card…). Identity colors

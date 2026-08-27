@@ -14,8 +14,19 @@ const DunderRenderer = {
     this._blurBottom = null;
     this._blurTimer = 0;
     this.backdrop = null;
+    // themed character sprites (same registry as the office renderer)
+    this.sprites = {};
+    const names = ['michael', 'dwight', 'jim', 'pam', 'angela', 'kevin',
+                   'uma', 'xyla', 'hazel', 'dash', 'pixel', 'coco', 'gizmo', 'yara',
+                   'batman', 'robin', 'catwoman', 'joker', 'bane', 'nightwing',
+                   'luke', 'leia', 'han', 'chewbacca', 'r2-d2', 'c-3po'];
+    for (const n of names) {
+      const img = new Image();
+      img.src = 'assets/char-' + n + '.png';
+      this.sprites[n] = img;
+    }
     const img = new Image();
-    img.src = 'assets/dunder-backdrop.png';
+    img.src = 'assets/dunder-real-office.png';
     img.onload = () => { this.backdrop = img; if (eng.renderer === this) eng.resize(); };
     this._flakes = [];
     for (let i = 0; i < 24; i++) {
@@ -33,14 +44,14 @@ const DunderRenderer = {
     const depth = 0.72 + 0.28 * (y / 10);
     const s = eng.scale || 1;
     const mobile = eng.cssW < 860;
-    // desktop: full-bleed backdrop with the grid anchored mid-low
-    // mobile: grid fills the width and sits in the visible lower 2/3
+    // desktop: spread the office grid across the middle band of the scene so
+    // stations/labels/characters are separated (no more bottom-third squeeze)
     const sx = mobile
       ? eng.cssW * 0.06 + (x / 10) * (eng.cssW * 0.88)
-      : eng.cssW * (0.055 + 0.89 * (x / 10));
+      : eng.cssW * (0.08 + 0.84 * (x / 10));
     const sy = mobile
       ? eng.cssH * 0.42 + (y / 10) * (eng.cssH * 0.42) * (1.15 - depth * 0.4)
-      : eng.cssH * (0.66 + (1 - depth) * 0.12);
+      : eng.cssH * (0.30 + (y / 10) * 0.52);
     return { x: sx, y: sy, d: depth };
   },
 
@@ -158,12 +169,17 @@ const DunderRenderer = {
       : (st) => true;
     ctx.textAlign = 'center';
     ctx.font = `800 ${eng.s(mobile ? 9 : 11)}px ${monoFont()}`;
+    // per-station deterministic lift so back-row labels never collide
+    const lift = { michael: 52, conference: 34, breakroom: 20, annex: 18, warehouse: 14, mail: 12 };
     for (const st of eng.theme.stations) {
       if (!labelFilter(st)) continue;
       const c = this.map(eng, st.x, st.y);
       const back = st.y < 3.5;
       const front = st.type === 'reception' || st.type === 'mail';
-      const ly = back ? c.y - eng.s(mobile ? 30 : 44) : (front ? c.y - eng.s(mobile ? 26 : 40) : c.y - eng.s(mobile ? 16 : 26));
+      const extra = lift[st.id] || 0;
+      const ly = (back ? c.y - eng.s((mobile ? 30 : 44) + extra)
+                 : front ? c.y - eng.s((mobile ? 26 : 40) + extra)
+                 : c.y - eng.s((mobile ? 16 : 26) + extra));
       const tw = ctx.measureText(st.label.toUpperCase()).width;
       const rot = (st.id.length % 5 - 2) * 0.02; // tiny per-label rotation, hand-placed feel
       ctx.save();
@@ -243,6 +259,18 @@ const DunderRenderer = {
   drawAgent(eng, ctx, a, now) {
     const c = this.map(eng, a.x, a.y);
     const s = eng.scale * c.d;
+    // themed character sprite when available (recognizable cast, correct scale)
+    const spr = this.sprites[(a.name || '').toLowerCase()];
+    if (spr && spr.complete && spr.naturalWidth > 0) {
+      const w = 108 * s, hh = 108 * s;
+      const bob = a.moving ? Math.sin(a.walkPhase) * 1.5 * s : Math.sin(a.walkPhase * 0.55) * 0.8 * s;
+      ctx.fillStyle = 'rgba(50,40,25,0.25)';
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y + 3 * s, 18 * s, 5.5 * s, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.drawImage(spr, c.x - w / 2, c.y - hh + bob + 6 * s, w, hh);
+      return;
+    }
     const vs = this.agentsV.get(a.id) || { walk: 0, blink: 0, tilt: 0 };
     const bob = a.moving ? Math.abs(Math.sin(a.walkPhase)) * -3 * s : Math.sin(a.walkPhase * 0.5) * 1.2 * s;
     if (now > a.blinkAt) { vs.blink = 1; a.blinkAt = now + 2 + Math.random() * 4; }

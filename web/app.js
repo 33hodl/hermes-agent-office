@@ -9,7 +9,7 @@
 
 const THEMES = {
   office: {
-    name: 'office', brand: '🏢', renderer: 'office', franchiseId: 'office', backdrop: 'assets/office-backdrop-v4.png', fullbleed: true,
+    name: 'office', brand: '🏢', renderer: 'office', franchiseId: 'office',
     agentNames: ['Uma', 'Xyla', 'Hazel', 'Dash', 'Pixel', 'Coco', 'Gizmo', 'Yara'],
     ui: { accent: '#d96f4a' },
     floor: { base: '#e8dcc3', alt: '#e1d3b6', grid: 'rgba(120,100,60,0.10)' },
@@ -37,7 +37,7 @@ const THEMES = {
   },
 
   nous: {
-    name: 'nous', brand: '◈', renderer: 'nous', franchiseId: 'office',
+    name: 'nous', brand: '◈', renderer: 'office', franchiseId: 'office',
     agentNames: ['Uma', 'Xyla', 'Hazel', 'Dash', 'Pixel', 'Coco', 'Gizmo', 'Yara'],
     ui: { accent: '#4d7cf6' },
     floor: { base: '#0d0d15', alt: '#10101a', grid: 'rgba(77,124,246,0.28)' },
@@ -80,22 +80,22 @@ const THEMES = {
     },
     entrance: { x: 0.5, y: 7.2 },
     stations: [
-      { id: 'entrance', label: 'Front Door', type: 'entrance', x: 0.6, y: 8.8 },
-      { id: 'reception', label: 'Reception', type: 'reception', x: 2.8, y: 9.4 },
-      { id: 'bullpen', label: 'Bullpen', type: 'desks', x: 4.4, y: 4.2 },
-      { id: 'michael', label: "Michael's Office", type: 'office', x: 8.9, y: 1.2 },
-      { id: 'conference', label: 'Conference Room', type: 'conference', x: 7.3, y: 5.6 },
-      { id: 'breakroom', label: 'Break Room', type: 'breakroom', x: 2.2, y: 1.6 },
-      { id: 'annex', label: 'The Annex', type: 'desks', x: 6.4, y: 8.2 },
-      { id: 'mail', label: 'Inbox', type: 'mail', x: 4.2, y: 9.4 },
-      { id: 'warehouse', label: 'Warehouse', type: 'warehouse', x: 9.2, y: 9.0 },
+      { id: 'entrance', label: 'Front Door', type: 'entrance', x: 0.5, y: 9.2 },
+      { id: 'reception', label: 'Reception', type: 'reception', x: 1.8, y: 9.6 },
+      { id: 'bullpen', label: 'Bullpen', type: 'desks', x: 4.6, y: 4.4 },
+      { id: 'michael', label: "Michael's Office", type: 'office', x: 1.2, y: 1.4 },
+      { id: 'conference', label: 'Conference Room', type: 'conference', x: 6.8, y: 2.4 },
+      { id: 'breakroom', label: 'Break Room', type: 'breakroom', x: 8.2, y: 1.6 },
+      { id: 'annex', label: 'The Annex', type: 'desks', x: 9.0, y: 5.2 },
+      { id: 'mail', label: 'Inbox', type: 'mail', x: 3.6, y: 9.6 },
+      { id: 'warehouse', label: 'Warehouse', type: 'warehouse', x: 9.6, y: 9.4 },
     ],
     desks: [[3.2,3.2],[4.2,3.2],[5.2,3.2],[3.2,4.2],[4.2,4.2],[5.2,4.2],[6.0,7.8],[7.0,7.8],[6.0,8.6],[7.0,8.6]],
     plants: [[2.4,6.6],[6.2,0.8],[0.8,2.6],[7.6,8.8]],
   },
 
   batman: {
-    name: 'batman', brand: '🦇', renderer: 'office', franchiseId: 'batman', fullbleed: true,
+    name: 'batman', brand: '🦇', renderer: 'office', franchiseId: 'batman', windowArt: 'assets/batman-window.png', 
     agentNames: ['Batman', 'Robin', 'Catwoman', 'Joker', 'Bane', 'Nightwing', 'Batgirl', 'Alfred'],
     ui: { accent: '#8a6fd8' },
     backdrop: 'assets/batman-backdrop.png',
@@ -124,7 +124,7 @@ const THEMES = {
     ],
   },
   starwars: {
-    name: 'starwars', brand: '🚀', renderer: 'office', franchiseId: 'starwars', fullbleed: true,
+    name: 'starwars', brand: '🚀', renderer: 'office', franchiseId: 'starwars', windowArt: 'assets/starwars-window.png', 
     agentNames: ['Luke', 'Leia', 'Han', 'Chewbacca', 'R2-D2', 'C-3PO', 'Obi-Wan', 'Yoda'],
     ui: { accent: '#e8c04a' },
     backdrop: 'assets/starwars-backdrop.png',
@@ -233,7 +233,7 @@ function handleEvent(ev) {
   }
   switch (ev.type) {
     case 'agent_enter':
-      eng.bubble(a, 'Arrived', null, 3.5);
+      eng.bubble(a, flavorFor(a.name) || 'Arrived', null, 3.5);
       break;
     case 'agent_leave':
       if (a) {
@@ -706,25 +706,23 @@ function applyTheme(name) {
   window.__activeCustomTheme = activeCustomTheme;
   eng.setTheme(theme);
   eng.setRenderer(RENDERERS[theme.renderer || 'office']);
-  if (eng.renderer && theme.backdrop && eng.renderer.name === 'office') {
-    // custom backdrop drawn behind the back walls (or full-bleed for franchise themes)
+  if (eng.renderer && eng.renderer.name === 'office') {
+    // themed WINDOW ART: the office interior stays procedural; the image is the view
+    // through the back-wall window (cohesive, characters keep human scale)
+    eng.renderer.customBackdrop = null;
+    const art = theme.windowArt || 'assets/office-window.png';
     const img = new Image();
-    img.src = theme.backdrop;
+    img.src = art;
     const apply = () => {
       if (eng.renderer) {
-        eng.renderer.customBackdrop = img;
+        eng.renderer.backdrop = img;
+        eng.renderer._blurTop = null; eng.renderer._blurBottom = null; eng.renderer._blurTimer = 0;
         eng.resize();
-        // invalidate + rebuild blur bands so stale blurred-room bands don't cover the scene
-        eng.renderer._blurTop = null;
-        eng.renderer._blurBottom = null;
-        eng.renderer._blurTimer = 0;
-        // double-resize: once for the layer, once after paint
         requestAnimationFrame(() => { if (eng.renderer) eng.resize(); });
       }
     };
     if (img.decode) { img.decode().then(apply).catch(() => { img.onload = apply; }); }
     else { img.onload = apply; }
-    // belt-and-braces: onload always fires when the image is ready
     img.onload = apply;
   } else if (eng.renderer) {
     eng.renderer.customBackdrop = null;
@@ -806,7 +804,25 @@ function restoreCustomThemes() {
 
 function boot() {
   eng = new OfficeEngine($('stage'));
-  window.__eng = eng;
+    // in-character flavor (themes with recognizable casts say their lines)
+  const FLAVOR_LINES = {
+    michael: ["That's what she said.", "I'm not superstitious, but I am a little stitious.", "Would I rather be feared or loved? Easy. Both."],
+    dwight: ["Bears. Beets. Battlestar Galactica.", "False.", "Schrute bucks awarded.", "I am ready for the zombie apocalypse."],
+    jim: ["*looks at camera*", "Dwight, that's not a real thing.", "Pam, you up for a prank?"],
+    pam: ["Jim, stop it.", "I'm fine. It's fine.", "Another Dundie for Michael..."],
+    kevin: ["Kevin's famous chili is ready.", "Are we having pretzel day?"],
+    angela: ["The cats need feeding.", "That is unprofessional.", "Mose, no."],
+    batman: ["I'm the night.", "Justice.", "The bat-signal... they need me."],
+    joker: ["Why so serious?", "It's not about the money...", "Madness is the emergency exit."],
+    luke: ["The Force is with me.", "I have a bad feeling about this."],
+    han: ["I've got a bad feeling about this.", "Never tell me the odds.", "Kid, I've flown from one side of this galaxy..."],
+    chewbacca: ["RRRAAARGH!", "RRrrrgh.", "Grrrrawr."],
+  };
+  function flavorFor(name) {
+    const lines = FLAVOR_LINES[(name || '').toLowerCase()];
+    return lines ? lines[Math.floor(Math.random() * lines.length)] : null;
+  }
+window.__eng = eng;
   // visible version badge so users can confirm they're on the latest build
   const demoTag = document.getElementById('source-badge');
   if (demoTag && !document.querySelector('.ver-badge')) {

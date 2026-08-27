@@ -31,9 +31,10 @@ const OfficeRenderer = {
   },
 
   _loadSprites() {
-    const names = ['batman', 'robin', 'catwoman', 'joker', 'luke', 'leia', 'han', 'chewbacca',
-                   'michael', 'dwight', 'jim', 'pam', 'uma', 'xyla', 'hazel', 'dash',
-                   'pixel', 'coco', 'gizmo', 'yara'];
+    const names = ['batman', 'robin', 'catwoman', 'joker', 'bane', 'nightwing',
+                   'luke', 'leia', 'han', 'chewbacca', 'r2-d2', 'c-3po',
+                   'michael', 'dwight', 'jim', 'pam', 'angela', 'kevin',
+                   'uma', 'xyla', 'hazel', 'dash', 'pixel', 'coco', 'gizmo', 'yara'];
     for (const n of names) {
       const img = new Image();
       img.src = 'assets/char-' + n + '.png';
@@ -54,7 +55,7 @@ const OfficeRenderer = {
   },
 
   resize(eng) {
-    const fit = Math.min(eng.cssW / 640, eng.cssH / 380);
+    const fit = Math.min(eng.cssW / 560, eng.cssH / 330);
     // mobile: much bigger scene so agents are prominent and the room fills the screen
     const mfit = eng.cssW < 860 ? Math.min(eng.cssW / 250, eng.cssH / 470) : fit;
     eng.scale = clamp(mfit, 0.45, 1.7) * (eng.zoom || 1);
@@ -624,7 +625,7 @@ const OfficeRenderer = {
   /* themed character sprite (AI-generated art) */
   drawSpriteAgent(eng, ctx, a, c, u, img) {
     const bob = a.moving ? Math.sin(a.walkPhase) * 1.5 * u : Math.sin(a.walkPhase * 0.55) * 0.8 * u;
-    const w = 44 * u, hh = 44 * u;
+    const w = 96 * u, hh = 96 * u;
     // grounding shadow
     const sh = ctx.createRadialGradient(c.x, c.y + u * 3, u * 2, c.x, c.y + u * 3, u * 15);
     sh.addColorStop(0, 'rgba(60,45,25,0.35)');
@@ -633,22 +634,12 @@ const OfficeRenderer = {
     ctx.beginPath();
     ctx.ellipse(c.x, c.y + u * 3, u * 15, u * 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    // draw sprite with slight bob + squash on walk, clipped to a soft circle
-    // (kills any leftover background from the generated art)
+    // draw sprite with slight bob + squash on walk (true transparency, no circle)
     const sq = a.moving ? 0.06 : 0;
     ctx.save();
     ctx.translate(c.x, c.y - hh / 2 + bob + u * 6);
     ctx.scale(1 + sq, 1 - sq);
-    ctx.beginPath();
-    ctx.arc(0, 0, w * 0.52, 0, Math.PI * 2);
-    ctx.clip();
     ctx.drawImage(img, -w / 2, -hh / 2, w, hh);
-    // subtle rim so the clip reads as intentional
-    ctx.beginPath();
-    ctx.arc(0, 0, w * 0.52, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
     ctx.restore();
     // halo behind on dark themes
     if (eng.theme && eng.theme.fx && eng.theme.fx.dark) {
