@@ -361,12 +361,30 @@ function renderMailList() {
         <span class="m-when">${timeAgo(d.ts)}</span>
       </div>
       <div class="m-title">${esc(d.title)}</div>
-      <div class="m-content">${esc(d.content)}</div>`;
-    li.addEventListener('click', () => {
+      <div class="m-content">${esc(d.content)}</div>
+      <div class="m-actions">
+        <button class="m-copy" data-id="${esc(d.id)}" title="Copy delivery text">⧉ Copy</button>
+      </div>`;
+    li.addEventListener('click', (e) => {
+      if (e.target.closest('.m-copy')) return;
       li.classList.toggle('open');
       if (!d.read) markRead([d.id]);
     });
     list.appendChild(li);
+  }
+  for (const btn of list.querySelectorAll('.m-copy')) {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = Number(btn.dataset.id);
+      const d = store.deliveries.find((x) => x.id === id);
+      if (!d) return;
+      try {
+        await navigator.clipboard.writeText(d.title + '\n\n' + (d.content || ''));
+        toast('Copied', 'Delivery text is on your clipboard', '#7ec8c0');
+      } catch (err) {
+        toast('Copy failed', 'Clipboard unavailable', '#c0504d');
+      }
+    });
   }
 }
 
@@ -413,6 +431,95 @@ function openAgentModal(id) {
       : '<div class="log-row dim">No deliveries yet — they land in the mailbox.</div>';
   }
   openModal('agent-modal');
+}
+
+/* ============================== Task bar ============================== */
+async function submitTask(text) {
+  if (!text) return;
+  try {
+    const res = await fetch('/api/task', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      toast('Task not accepted', (data && data.error) || 'try again', '#c0504d');
+      return;
+    }
+    toast('Task assigned', 'The team is on it — watch the office', '#d96f4a');
+    Sound.assigned();
+  } catch (e) {
+    toast('Task not accepted', 'Office server unreachable', '#c0504d');
+  }
+}
+
+/* ============================== First-run tour ============================== */
+const TOUR_STEPS = [
+  { el: '#stage', title: 'This is your office', text: 'Your Hermes agents live here. Watch them walk between desks, use tools, and work in real time.' },
+  { el: '#roster-panel', title: 'Your agents', text: 'Every agent has its own look — headgear, props, colors. Click one to see its role, model, loadout and recent deliveries.' },
+  { el: '.topbar-task', title: 'Give them work', text: 'Type a task and press Enter. In live mode it runs a real Hermes session; in demo, watch the whole flow.' },
+  { el: '#mailbox-btn', title: 'The mailbox', text: 'Finished work lands here. Click an item to read it, or hit ⧉ Copy to grab the text.' },
+];
+let tourStep = 0;
+function showTour() {
+  if ($('tour').classList.contains('hidden') === false) return;
+  tourStep = 0;
+  $('tour').classList.remove('hidden');
+  renderTourStep();
+}
+function hideTour() {
+  $('tour').classList.add('hidden');
+  localStorage.setItem('office-tour-seen', '1');
+}
+function renderTourStep() {
+  const s = TOUR_STEPS[tourStep];
+  $('tour-title').textContent = s.title;
+  $('tour-text').textContent = s.text;
+  $('tour-prev').classList.toggle('hidden', tourStep === 0);
+  $('tour-next').textContent = tourStep === TOUR_STEPS.length - 1 ? 'Done' : 'Next →';
+  // highlight target
+  document.querySelectorAll('.tour-spot').forEach((x) => x.remove());
+  const el = document.querySelector(s.el);
+  if (el) {
+    const r = el.getBoundingClientRect();
+    const spot = document.createElement('div');
+    spot.className = 'tour-spot';
+    spot.style.cssText = `left:${r.left - 6}px;top:${r.top - 6}px;width:${r.width + 12}px;height:${r.height + 12}px;`;
+    document.body.appendChild(spot);
+    $('tour-card').style.left = '50%';
+  }
+  // dots
+  $('tour-dots').innerHTML = TOUR_STEPS.map((_, i) =>
+    `<span class="tour-dot${i === tourStep ? ' on' : ''}"></span>`).join('');
+}
+function wireTour() {
+  $('tour-next').addEventListener('click', () => {
+    if (tourStep < TOUR_STEPS.length - 1) { tourStep++; renderTourStep(); }
+    else hideTour();
+  });
+  $('tour-prev').addEventListener('click', () => { if (tourStep > 0) { tourStep--; renderTourStep(); } });
+  $('tour-skip').addEventListener('click', hideTour);
+}
+
+/* ============================== Keyboard shortcuts ============================== */
+function wireShortcuts() {
+  window.addEventListener('keydown', (e) => {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    switch (e.key) {
+      case '1': applyTheme('office'); break;
+      case '2': applyTheme('nous'); break;
+      case '3': applyTheme('dunder'); break;
+      case 'm': case 'M': toggleMute(); break;
+      case 'g': case 'G': openMailbox(); break;
+      case 't': case 'T':
+        e.preventDefault();
+        const ti = $('task-input');
+        if (ti) ti.focus();
+        break;
+      case '?': showTour(); break;
+    }
+  });
 }
 
 function openModal(id) { $(id).classList.remove('hidden'); }
@@ -478,6 +585,7 @@ const Sound = {
   },
   delivery() { this.pop(660, 0.12, 0.06); setTimeout(() => this.pop(880, 0.1, 0.04), 90); },
   theme() { this.pop(440, 0.08, 0.04); },
+  assigned() { this.pop(520, 0.1, 0.05); setTimeout(() => this.pop(700, 0.09, 0.04), 80); },
   /* ambient office soundscape — synthesized, zero assets */
   ambientNodes: null,
   startAmbient() {
@@ -721,6 +829,31 @@ function boot() {
       }
     });
   }
+
+  // task bar
+  const taskInput = $('task-input');
+  const taskSend = $('task-send');
+  const runTask = () => {
+    const t = taskInput.value.trim();
+    if (t) { submitTask(t); taskInput.value = ''; taskInput.blur(); }
+  };
+  taskSend.addEventListener('click', runTask);
+  taskInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') runTask(); });
+
+  // tour: after welcome (if not seen)
+  wireTour();
+  const tourSeen = localStorage.getItem('office-tour-seen');
+  if (!tourSeen) {
+    const w = $('welcome');
+    const startTour = () => showTour();
+    if (w && !w.classList.contains('hidden')) {
+      $('welcome-close').addEventListener('click', startTour);
+      $('welcome-demo').addEventListener('click', startTour);
+    } else {
+      setTimeout(startTour, 800);
+    }
+  }
+  wireShortcuts();
 
   const cb = document.getElementById('creator-btn');
   if (cb) {

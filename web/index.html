@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hermes Agent Office</title>
 <link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1117">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 </head>
 <body data-theme="office">
   <header id="topbar">
@@ -16,6 +19,10 @@
     <div class="topbar-center">
       <span class="live-dot" id="live-dot"></span>
       <span id="live-label">connecting…</span>
+    </div>
+    <div class="topbar-task">
+      <input id="task-input" type="text" placeholder="Give your agents a task… (e.g. plan a weekend trip to Kyoto)" autocomplete="off" />
+      <button id="task-send" title="Assign task (Enter)">➤</button>
     </div>
     <div class="topbar-right">
       <button id="mute-btn" class="mute-btn" title="Toggle sound">🔊</button>
@@ -93,6 +100,21 @@
     </div>
   </div>
 
+  <!-- First-run tour -->
+  <div id="tour" class="tour hidden">
+    <div class="tour-shade"></div>
+    <div class="tour-card" id="tour-card">
+      <div class="tour-title" id="tour-title"></div>
+      <div class="tour-text" id="tour-text"></div>
+      <div class="tour-actions">
+        <button id="tour-prev" class="creator-ghost hidden">← Back</button>
+        <button id="tour-next" class="creator-build">Next →</button>
+        <button id="tour-skip" class="creator-ghost">Skip</button>
+      </div>
+      <div class="tour-dots" id="tour-dots"></div>
+    </div>
+  </div>
+
   <!-- Custom office creator -->
   <div id="creator-root"></div>
 
@@ -143,5 +165,10 @@
   <script src="dunder-renderer.js"></script>
   <script src="creator.js"></script>
   <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+  </script>
 </body>
 </html>

@@ -16,6 +16,18 @@ tool room when they call a tool, and drop finished work in your mailbox.
 | **Nous** | a holographic data plane — AI-painted data center, neon perspective grid, glowing agent orbs with light trails |
 | **Dunder Mifflin** | the Scranton branch, painted in flat 2D sitcom style — reception, bullpen, conference room, break room |
 
+### Command your agents (task bar)
+
+Type a task in the top bar and press Enter — in **live mode** the office runs a
+real Hermes session (`hermes chat -q`) and the agent walks in and does it; in
+**demo mode** you watch the full flow simulated. Keyboard shortcuts:
+`1`/`2`/`3` switch themes, `m` mute, `g` mailbox, `t` task bar, `?` tour.
+
+### Installable & mobile-friendly
+
+It's a PWA: open it, install it (manifest + service worker), works offline for
+the static shell, and the layout collapses to a mobile view under 860px.
+
 ### Cinematic feel
 
 Every theme gets a **tilt-shift depth-of-field** (soft blurred top/bottom edges),

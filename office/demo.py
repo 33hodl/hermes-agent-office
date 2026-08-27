@@ -114,6 +114,37 @@ class DemoSource:
                        text="Reassigned to a new role")
         self._agent_state.clear()
 
+    def assign_task(self, text: str):
+        """User-given task: broadcast, then run it end-to-end on one agent."""
+        self._emit(type="status", agent="—", session="office",
+                   text=f"New task for the team: \"{text}\"")
+        names = self._name_pool or AGENT_NAMES[:4]
+        name = names[0]
+        if name not in self._agent_state:
+            self._new_agent()
+        st = self._agent_state.get(name, {"role": "telegram", "session": f"demo-{name.lower()}", "task": "", "tools": []})
+        st["task"] = text
+        self._emit(type="thinking", agent=name, session=st["session"], role=st["role"],
+                   text=f"Taking the task: {text[:80]}", task=text,
+                   tokens=self._tokens(300, 120))
+        self._emit(type="tool_call", agent=name, session=st["session"], role=st["role"],
+                   tool="web_search", task=text, tokens=self._tokens(700, 200))
+        self._emit(type="tool_call", agent=name, session=st["session"], role=st["role"],
+                   tool="web_extract", task=text, tokens=self._tokens(900, 240))
+        self._emit(type="thinking", agent=name, session=st["session"], role=st["role"],
+                   text="Writing up the deliverable…", task=text,
+                   tokens=self._tokens(300, 130))
+        self._emit(type="delivery", agent=name, session=st["session"], role=st["role"],
+                   title=text,
+                   content=f"Done! Here's what I found for: {text}\n\n"
+                           f"Summary: I researched this end-to-end (web_search → web_extract) and "
+                           f"distilled the key points into the delivery below. "
+                           f"Full reasoning trail is in my session.\n\n— {name} ({st['role']} agent)",
+                   task=text, tokens=self._tokens(600, 850))
+        self._emit(type="idle", agent=name, session=st["session"], role=st["role"],
+                   text="Waiting at desk for your next prompt")
+        return True, None
+
     def burst_task(self) -> None:
         """Fast scripted task so a new user sees the office in action."""
         names = self._name_pool or AGENT_NAMES[:4]

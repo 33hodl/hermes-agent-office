@@ -167,6 +167,21 @@ class OfficeHandler(BaseHTTPRequestHandler):
             if ok:
                 return self._json({"ok": True, "url": office_art.cache_url_for(prompt), "cached": False})
             return self._json({"ok": False, "error": msg}, 502)
+        if path == "/api/task" and self.command == "POST":
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+            except Exception:
+                body = {}
+            text = (body.get("text") or "").strip()[:500]
+            if not text:
+                return self._json({"ok": False, "error": "empty task"}, 400)
+            src = self.app.source
+            if hasattr(src, "assign_task"):
+                ok, err = src.assign_task(text)
+                if not ok:
+                    return self._json({"ok": False, "error": err}, 400)
+                return self._json({"ok": True, "text": text, "mode": getattr(src, "name", "?")})
+            return self._json({"ok": False, "error": "task assignment not supported in this mode"}, 400)
         if path == "/api/demo/burst":
             src = self.app.source
             if hasattr(src, "burst_task"):
@@ -345,6 +360,31 @@ class VisitorSource:
             self._stop.wait(self.poll_interval)
 
 
+class LiveTaskRunner:
+    """Runs a real Hermes task in the background when the office is in live
+    mode. The spawned session is picked up by the state.db poller, so the
+    agent literally walks into the office and does the task."""
+
+    def __init__(self, db_path: str):
+        self.db_path = db_path
+        self._threads = []
+
+    def assign(self, text: str):
+        th = threading.Thread(target=self._run, args=(text,), daemon=True)
+        th.start()
+        self._threads.append(th)
+        return True, None
+
+    def _run(self, text: str):
+        import subprocess as sp
+        try:
+            r = sp.run(["hermes", "chat", "-q", text],
+                       capture_output=True, text=True, timeout=600,
+                       env={**os.environ, "HERMES_HOME": os.path.dirname(os.path.dirname(self.db_path))})
+        except Exception:
+            pass
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(prog="hermes-office", description=__doc__)
     ap.add_argument("--demo", action="store_true", help="demo mode (default)")
@@ -360,6 +400,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if args.db:
         source = HermesDBSource(db_path=args.db, poll_interval=args.poll)
+        source.assign_task = LiveTaskRunner(args.db).assign
     elif args.visit:
         source = VisitorSource(remote=args.visit, poll_interval=args.poll)
     else:
