@@ -15,7 +15,7 @@ const DunderRenderer = {
     this._blurTimer = 0;
     this.backdrop = null;
     const img = new Image();
-    img.src = '/assets/dunder-backdrop.png';
+    img.src = 'assets/dunder-backdrop.png';
     img.onload = () => { this.backdrop = img; if (eng.renderer === this) eng.resize(); };
     this._flakes = [];
     for (let i = 0; i < 24; i++) {

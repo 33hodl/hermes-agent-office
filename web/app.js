@@ -98,7 +98,7 @@ const THEMES = {
     name: 'batman', brand: '🦇', renderer: 'office', franchiseId: 'batman', fullbleed: true,
     agentNames: ['Batman', 'Robin', 'Catwoman', 'Joker', 'Bane', 'Nightwing', 'Batgirl', 'Alfred'],
     ui: { accent: '#8a6fd8' },
-    backdrop: '/assets/batman-backdrop.png',
+    backdrop: 'assets/batman-backdrop.png',
     floor: { base: '#3a3a46', alt: '#32323e', grid: 'rgba(160,140,255,0.12)' },
     wall: { back: '#2e2a38', side: '#3a3446', base: '#221e2c', frame: '#4a3a5a' },
     props: {
@@ -127,7 +127,7 @@ const THEMES = {
     name: 'starwars', brand: '🚀', renderer: 'office', franchiseId: 'starwars', fullbleed: true,
     agentNames: ['Luke', 'Leia', 'Han', 'Chewbacca', 'R2-D2', 'C-3PO', 'Obi-Wan', 'Yoda'],
     ui: { accent: '#e8c04a' },
-    backdrop: '/assets/starwars-backdrop.png',
+    backdrop: 'assets/starwars-backdrop.png',
     floor: { base: '#4a4a52', alt: '#42424a', grid: 'rgba(255,220,120,0.12)' },
     wall: { back: '#3a3a42', side: '#44444e', base: '#2e2e36', frame: '#5a4a2e' },
     props: {

@@ -16,7 +16,7 @@ const OfficeRenderer = {
     this._loadSprites();
     this.backdrop = null;
     const img = new Image();
-    img.src = '/assets/office-backdrop-v3.png';
+    img.src = 'assets/office-backdrop-v3.png';
     img.onload = () => { this.backdrop = img; if (eng.renderer === this) eng.resize(); };
     this._dust = [];
     this._blurTop = null;
@@ -35,7 +35,7 @@ const OfficeRenderer = {
                    'michael', 'dwight', 'jim', 'pam'];
     for (const n of names) {
       const img = new Image();
-      img.src = '/assets/char-' + n + '.png';
+      img.src = 'assets/char-' + n + '.png';
       this.sprites[n] = img;
     }
   },

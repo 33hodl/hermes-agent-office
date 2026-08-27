@@ -14,7 +14,7 @@ const NousRenderer = {
     this._blurTimer = 0;
     this.backdrop = null;
     const img = new Image();
-    img.src = '/assets/nous-backdrop.png';
+    img.src = 'assets/nous-backdrop.png';
     img.onload = () => { this.backdrop = img; if (eng.renderer === this) eng.resize(); };
     this.trails = new Map();   // agent id -> [{x,y,t}...]
     this._motes = [];
