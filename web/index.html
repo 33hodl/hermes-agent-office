@@ -1,10 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+// force-fresh: drop any stale service worker or cached shell from older builds
+(function () {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function (rs) {
+      rs.forEach(function (r) { r.unregister(); });
+    });
+  }
+  if ('caches' in window) {
+    caches.keys().then(function (ks) {
+      ks.forEach(function (k) { if (k !== 'office-v1787814290') caches.delete(k); });
+    });
+  }
+})();
+</script>
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hermes Agent Office</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=1787814290">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Hermes Agent Office — watch your agents work">
 <meta property="og:description" content="Your Hermes agents get an office: 3 art styles, custom offices from any movie or show, real-time work, deliveries in your mailbox. Open source, zero dependencies.">
@@ -172,15 +188,15 @@
     </div>
   </div>
 
-  <script src="custom.js"></script>
-  <script src="creator-html.js"></script>
-  <script src="engine.js"></script>
-  <script src="office-renderer.js"></script>
-  <script src="nous-renderer.js"></script>
-  <script src="dunder-renderer.js"></script>
-  <script src="creator.js"></script>
-  <script src="demo-feed.js"></script>
-  <script src="app.js"></script>
+  <script src="custom.js?v=1787814290"></script>
+  <script src="creator-html.js?v=1787814290"></script>
+  <script src="engine.js?v=1787814290"></script>
+  <script src="office-renderer.js?v=1787814290"></script>
+  <script src="nous-renderer.js?v=1787814290"></script>
+  <script src="dunder-renderer.js?v=1787814290"></script>
+  <script src="creator.js?v=1787814290"></script>
+  <script src="demo-feed.js?v=1787814290"></script>
+  <script src="app.js?v=1787814290"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
