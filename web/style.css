@@ -550,3 +550,15 @@ body[data-theme="office"] .brand-name { font-weight: 800; }
 @media (max-width: 860px) {
   .zoom-controls { right: 8px; bottom: 76px; }
 }
+
+.ver-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: #1a1a22;
+  color: #ffd479;
+  font: 700 10px/1.5 ui-monospace, monospace;
+  vertical-align: middle;
+  letter-spacing: 0.4px;
+}

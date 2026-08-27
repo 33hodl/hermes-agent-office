@@ -9,7 +9,7 @@
 
 const THEMES = {
   office: {
-    name: 'office', brand: '🏢', renderer: 'office', franchiseId: 'office',
+    name: 'office', brand: '🏢', renderer: 'office', franchiseId: 'office', backdrop: 'assets/office-backdrop-v4.png', fullbleed: true,
     agentNames: ['Uma', 'Xyla', 'Hazel', 'Dash', 'Pixel', 'Coco', 'Gizmo', 'Yara'],
     ui: { accent: '#d96f4a' },
     floor: { base: '#e8dcc3', alt: '#e1d3b6', grid: 'rgba(120,100,60,0.10)' },
@@ -807,6 +807,14 @@ function restoreCustomThemes() {
 function boot() {
   eng = new OfficeEngine($('stage'));
   window.__eng = eng;
+  // visible version badge so users can confirm they're on the latest build
+  const demoTag = document.getElementById('source-badge');
+  if (demoTag && !document.querySelector('.ver-badge')) {
+    const vb = document.createElement('span');
+    vb.className = 'ver-badge';
+    vb.textContent = 'v1.3';
+    demoTag.after(vb);
+  }
   restoreCustomThemes();
   const saved = localStorage.getItem('office-theme') || 'office';
   applyTheme(saved);

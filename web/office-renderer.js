@@ -100,6 +100,7 @@ const OfficeRenderer = {
     }
     if (fullbleed) {
       // full-bleed franchise themes: the painted scene IS the view
+      eng.staticLayer = layer;
       this._blurTop = null; this._blurBottom = null; this._blurTimer = 0;
       return this._buildStaticFullbleed(eng, g, w, h, layer);
     }
@@ -623,7 +624,7 @@ const OfficeRenderer = {
   /* themed character sprite (AI-generated art) */
   drawSpriteAgent(eng, ctx, a, c, u, img) {
     const bob = a.moving ? Math.sin(a.walkPhase) * 1.5 * u : Math.sin(a.walkPhase * 0.55) * 0.8 * u;
-    const w = 34 * u, hh = 34 * u;
+    const w = 44 * u, hh = 44 * u;
     // grounding shadow
     const sh = ctx.createRadialGradient(c.x, c.y + u * 3, u * 2, c.x, c.y + u * 3, u * 15);
     sh.addColorStop(0, 'rgba(60,45,25,0.35)');
