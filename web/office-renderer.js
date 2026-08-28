@@ -34,6 +34,7 @@ const OfficeRenderer = {
     const names = ['batman', 'robin', 'catwoman', 'joker', 'bane', 'nightwing',
                    'luke', 'leia', 'han', 'chewbacca', 'r2-d2', 'c-3po',
                    'michael', 'dwight', 'jim', 'pam', 'angela', 'kevin',
+                   'stanley', 'phyllis',
                    'uma', 'xyla', 'hazel', 'dash', 'pixel', 'coco', 'gizmo', 'yara'];
     for (const n of names) {
       const img = new Image();
@@ -619,8 +620,9 @@ const OfficeRenderer = {
       ctx.textAlign = 'left';
       ctx.globalAlpha = 1;
     }
-    // working indicator: spinning gear above active agents
-    if ((a.status === 'tool' || a.status === 'thinking') && !(a.bubble.text && now < a.bubble.until)) {
+    // working indicator: spinning gear — THINKING only (tool agents show the
+    // action badge above; showing both reads as clutter)
+    if (a.status === 'thinking' && !(a.bubble.text && now < a.bubble.until)) {
       const gx = c.x, gy = y - 36 * u;
       const spin = (now * 3) % (Math.PI * 2);
       ctx.save();
@@ -674,10 +676,13 @@ const OfficeRenderer = {
     ctx.beginPath();
     ctx.ellipse(c.x, c.y + u * 3, u * 11, u * 3.8, 0, 0, Math.PI * 2);
     ctx.fill();
-    // draw sprite with slight bob + squash on walk (true transparency, no circle)
-    const sq = a.moving ? 0.06 : 0;
+    // draw sprite with bob + squash + lean into motion (walk life, like the
+    // capsule characters — true transparency, no circle)
+    const sq = a.moving ? 0.08 : 0;
+    const tilt = a.moving ? a.facing * 0.06 : 0;
     ctx.save();
     ctx.translate(c.x, c.y - hh / 2 + bob + u * 4.2);
+    ctx.rotate(tilt);
     ctx.scale(1 + sq, 1 - sq);
     ctx.drawImage(img, -w / 2, -hh / 2, w, hh);
     ctx.restore();

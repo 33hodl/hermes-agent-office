@@ -17,6 +17,7 @@ const DunderRenderer = {
     // themed character sprites (same registry as the office renderer)
     this.sprites = {};
     const names = ['michael', 'dwight', 'jim', 'pam', 'angela', 'kevin',
+                   'stanley', 'phyllis',
                    'uma', 'xyla', 'hazel', 'dash', 'pixel', 'coco', 'gizmo', 'yara',
                    'batman', 'robin', 'catwoman', 'joker', 'bane', 'nightwing',
                    'luke', 'leia', 'han', 'chewbacca', 'r2-d2', 'c-3po'];
@@ -205,6 +206,7 @@ const DunderRenderer = {
     // per-station deterministic lift so back-row labels never collide with the
     // characters standing there (labels sit above the sprite's head)
     const lift = { michael: 52, conference: 34, breakroom: 20, annex: 18, warehouse: 14, mail: 12 };
+    const labelRects = [];   // for nametag-pill collision below
     for (const st of eng.theme.stations) {
       if (!labelFilter(st)) continue;
       const c = this.map(eng, st.x, st.y);
@@ -221,6 +223,7 @@ const DunderRenderer = {
       if (bubbleRects.some(r =>
         c.x - tw / 2 < r.x + r.w + 4 * s && c.x + tw / 2 + 4 * s > r.x &&
         ly - lh < r.y + r.h && ly > r.y)) continue;
+      labelRects.push({ x: c.x - tw / 2 - eng.s(6), y: ly - lh, w: tw + eng.s(12), h: lh + eng.s(6) });
       const rot = (st.id.length % 5 - 2) * 0.02; // tiny per-label rotation, hand-placed feel
       ctx.save();
       ctx.translate(c.x, ly - eng.s(5));
@@ -239,20 +242,46 @@ const DunderRenderer = {
       ctx.fillText(st.label.toUpperCase(), 0, 0);
       ctx.restore();
     }
-    // name tags: hover only — always-on tags pile up over the real set + sprites
+    // nametag pills — botvillage style: tiny bold monospace pill under each
+    // character, collision-resolved against each other + bubbles; hover = full
     ctx.textAlign = 'center';
-    ctx.font = `700 ${eng.s(10.5)}px ${monoFont()}`;
+    ctx.font = `700 ${eng.s(8.5)}px ${monoFont()}`;
+    const pills = [];
     for (const a of eng.agents.values()) {
-      // grounding shadow so characters sit ON the painted floor
       const c0 = this.map(eng, a.x, a.y);
-      if (eng.hoverAgent === a.id) {
-        const tw = ctx.measureText(a.name).width;
-        ctx.fillStyle = 'rgba(40,30,20,0.9)';
-        eng.roundRectPath(ctx, c0.x - tw / 2 - eng.s(6), c0.y - this.spriteH(eng, c0.d) - eng.s(14), tw + eng.s(12), eng.s(16), eng.s(8));
-        ctx.fill();
-        ctx.fillStyle = '#fdfaf0';
-        ctx.fillText(a.name, c0.x, c0.y - this.spriteH(eng, c0.d) - eng.s(2));
+      const tw = ctx.measureText(a.name).width;
+      const pw = tw + eng.s(10), ph = eng.s(12);
+      let px = clamp(c0.x - pw / 2, 2 * s, eng.cssW - pw - 2 * s);
+      let py = c0.y - this.spriteH(eng, c0.d) - ph - eng.s(4);
+      // when lifting, alternate side-offset so stacked pills fan out instead
+      // of one swallowing the other
+      for (let tries = 0; tries < 6; tries++) {
+        const clash = pills.some(p =>
+          px < p.x + p.w + 5 * s && px + pw + 5 * s > p.x &&
+          py < p.y + p.h + 4 * s && py + ph + 4 * s > p.y);
+        const bubbleClash = bubbleRects.some(r =>
+          px < r.x + r.w + 4 * s && px + pw + 4 * s > r.x &&
+          py < r.y + r.h + 3 * s && py + ph + 3 * s > r.y);
+        const labelClash = labelRects.some(r =>
+          px < r.x + r.w + 2 * s && px + pw + 2 * s > r.x &&
+          py < r.y + r.h + 2 * s && py + ph + 2 * s > r.y);
+        if (!clash && !bubbleClash && !labelClash) break;
+        if (tries % 2 === 0) {
+          py -= ph + 3 * s;                 // lift above
+        } else {
+          const dir = (tries / 2) % 2 === 0 ? 1 : -1;
+          px = clamp(px + dir * (pw * 0.9 + 4 * s), 2 * s, eng.cssW - pw - 2 * s);
+        }
       }
+      pills.push({ x: px, y: py, w: pw, h: ph });
+      const dim = eng.hoverAgent === a.id ? 1 : 0.72;
+      ctx.globalAlpha = dim;
+      ctx.fillStyle = 'rgba(36,28,18,0.78)';
+      eng.roundRectPath(ctx, px, py, pw, ph, ph / 2);
+      ctx.fill();
+      ctx.fillStyle = '#fdfaf0';
+      ctx.fillText(a.name, px + pw / 2, py + ph - eng.s(3.2));
+      ctx.globalAlpha = 1;
     }
     // draw the speech bubbles on top
     for (const r of bubbleRects) this.drawBubble(eng, ctx, r.a, r.x, r.y, r.w, r.h, r.text);
@@ -307,40 +336,48 @@ const DunderRenderer = {
       joker: 0.43, bane: 0.61, nightwing: 0.46, luke: 0.75, leia: 0.61,
       han: 0.61, chewbacca: 0.63, 'r2-d2': 0.80, 'c-3po': 0.59,
       michael: 0.52, dwight: 0.71, jim: 0.53, pam: 0.64, angela: 0.50, kevin: 0.57,
+      stanley: 0.54, phyllis: 0.38,
     };
     return A[(name || '').toLowerCase()] || 0.62;
   },
 
-  /* cast members without their own art reuse a visually-close sprite so nobody
-     ever falls back to the tiny capsule (Stanley → Kevin's build, Phyllis → Pam) */
-  _spriteName(name) {
-    const n = (name || '').toLowerCase();
-    if (n === 'stanley') return 'kevin';
-    if (n === 'phyllis') return 'pam';
-    return n;
-  },
+  /* every cast member has real art now — no aliasing needed */
 
   drawAgent(eng, ctx, a, now) {
     const c = this.map(eng, a.x, a.y);
     const s = eng.scale * c.d;
     // themed character sprite when available (recognizable cast, human scale:
     // a standing adult ≈ 38% of canvas height at full depth, scaled by depth)
-    const sprName = this._spriteName(a.name);
+    const sprName = (a.name || '').toLowerCase();
     const spr = this.sprites[sprName];
     if (spr && spr.complete && spr.naturalWidth > 0) {
       const hh = this.spriteH(eng, c.d);
       const w = hh * this._aspect(a.name);
       const bob = a.moving ? Math.sin(a.walkPhase) * 1.5 * s : Math.sin(a.walkPhase * 0.55) * 0.8 * s;
-      // soft contact shadow scaled to the sprite
-      ctx.fillStyle = 'rgba(50,40,25,0.28)';
+      // two-layer contact shadow: wide soft penumbra + tight dark core — the
+      // standard trick for anchoring a character on a photo
+      ctx.fillStyle = 'rgba(50,40,25,0.16)';
       ctx.beginPath();
-      ctx.ellipse(c.x, c.y + 3 * s, w * 0.42, Math.max(4 * s, w * 0.10), 0, 0, Math.PI * 2);
+      ctx.ellipse(c.x, c.y + 3 * s, w * 0.55, Math.max(5 * s, w * 0.14), 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(40,30,18,0.30)';
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y + 3 * s, w * 0.28, Math.max(3 * s, w * 0.07), 0, 0, Math.PI * 2);
       ctx.fill();
       // warm the sprite to the set's tungsten light so it reads less "sticker"
       ctx.save();
       ctx.filter = 'sepia(0.12) saturate(0.92) brightness(1.03)';
       ctx.drawImage(spr, c.x - w / 2, c.y - hh + bob + 6 * s, w, hh);
       ctx.restore();
+      // feet AO: soft dark gradient hugging the sprite's lower third, so the
+      // character "sits in" the carpet light instead of floating on it
+      const ao = ctx.createLinearGradient(0, c.y - hh * 0.34, 0, c.y + 4 * s);
+      ao.addColorStop(0, 'rgba(30,22,12,0)');
+      ao.addColorStop(1, 'rgba(30,22,12,0.22)');
+      ctx.fillStyle = ao;
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y + 3 * s, w * 0.34, hh * 0.36, 0, 0, Math.PI * 2);
+      ctx.fill();
       return;
     }
     const vs = this.agentsV.get(a.id) || { walk: 0, blink: 0, tilt: 0 };
