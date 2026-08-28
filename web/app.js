@@ -284,8 +284,15 @@ function handleEvent(ev) {
       a.status = 'tool';
       a.activity = ev.text || `using ${ev.tool}`;
       a.currentTool = ev.tool;
+      // work AT the desk (typing pose + dots); occasional trips to the tool
+      // room only for a few tools, so the room never becomes a cluster
+      const deskTools = new Set(['web_search', 'web_extract', 'read_file', 'write_file', 'patch', 'search_files', 'execute_code', 'skill_view', 'memory', 'session_search']);
       const tools = eng.stationOf('tools');
-      if (tools) eng.goTo(a, tools.x - 0.5 + (a.slot % 3) * 0.45, tools.y + 0.25 + (a.slot % 3) * 0.35);
+      if (tools && !deskTools.has(ev.tool)) {
+        eng.goTo(a, tools.x - 0.5 + (a.slot % 3) * 0.45, tools.y + 0.25 + (a.slot % 3) * 0.35);
+      } else {
+        eng.goTo(a, a.home.x, a.home.y);
+      }
       eng.bubble(a, toolLabel(a.currentTool), toolIcon(a.currentTool), 4);
       break;
     }

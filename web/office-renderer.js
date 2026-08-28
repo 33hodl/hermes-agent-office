@@ -1135,6 +1135,8 @@ const OfficeRenderer = {
       .sort((x, y) => y.bubble.until - x.bubble.until);
     const used = [];
     const s = eng.scale;
+    // highlight the NEWEST bubble, fade older ones (less visual noise)
+    let rank = 0;
     for (const a of active) {
       const c = this.map(eng, a.x, a.y);
       ctx.font = `600 ${11 * s}px ${monoFont()}`;
@@ -1155,7 +1157,8 @@ const OfficeRenderer = {
       }
       if (by < 8 * s) continue;        // clipped by the header — newer bubble wins
       used.push({ x: bx, y: by, w, h });
-      this.drawBubble(eng, ctx, a, bx, by, w, h, text);
+      this.drawBubble(eng, ctx, a, bx, by, w, h, text, rank / Math.max(1, active.length));
+      rank++;
     }
     // hover name tags
     ctx.font = `700 ${eng.s(10.5)}px ${monoFont()}`;
@@ -1175,11 +1178,12 @@ const OfficeRenderer = {
     ctx.textAlign = 'left';
   },
 
-  drawBubble(eng, ctx, a, bx, by, w, h, text) {
+  drawBubble(eng, ctx, a, bx, by, w, h, text, dim) {
     const s = eng.scale;
     const icon = a.bubble.icon;
     if (!text) text = a.bubble.text;
     const x = bx + w / 2, y = by + h + 6 * s;
+    ctx.globalAlpha = dim != null ? 0.82 - dim * 0.35 : 1;
     ctx.fillStyle = 'rgba(255,253,246,0.95)';
     ctx.strokeStyle = 'rgba(200,185,150,0.8)';
     ctx.lineWidth = 1.2 * s;
@@ -1202,6 +1206,7 @@ const OfficeRenderer = {
     ctx.textAlign = 'center';
     ctx.fillText(text, bx + w / 2 + (icon ? 16 * s + 5 * s : 0) / 2, by + h / 2 + 4 * s);
     ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
   },
 
   hitTest(eng, px, py) {
