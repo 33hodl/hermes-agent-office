@@ -168,7 +168,8 @@ const DunderRenderer = {
     const s = eng.scale;
     const active = [...eng.agents.values()]
       .filter(a => a.bubble.text && now < a.bubble.until)
-      .sort((x, y) => y.bubble.until - x.bubble.until);
+      .sort((x, y) => y.bubble.until - x.bubble.until)
+      .slice(0, 3);   // cap simultaneous bubbles — the roster carries full status
     const used = [];
     const bubbleRects = [];
     for (const a of active) {

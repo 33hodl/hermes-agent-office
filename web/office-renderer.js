@@ -1132,7 +1132,8 @@ const OfficeRenderer = {
     // overlapping ones stack upward, and anything above the header is dropped.
     const active = [...eng.agents.values()]
       .filter(a => a.bubble.text && now < a.bubble.until)
-      .sort((x, y) => y.bubble.until - x.bubble.until);
+      .sort((x, y) => y.bubble.until - x.bubble.until)
+      .slice(0, 3);   // cap simultaneous bubbles — the roster carries full status
     const used = [];
     const s = eng.scale;
     // highlight the NEWEST bubble, fade older ones (less visual noise)
