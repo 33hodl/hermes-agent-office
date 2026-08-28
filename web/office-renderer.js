@@ -31,11 +31,12 @@ const OfficeRenderer = {
   },
 
   _loadSprites() {
-    const names = ['batman', 'robin', 'catwoman', 'joker', 'bane', 'nightwing',
-                   'luke', 'leia', 'han', 'chewbacca', 'r2-d2', 'c-3po',
+    const names = ['batman', 'robin', 'catwoman', 'joker', 'bane', 'nightwing', 'batgirl', 'alfred',
+                   'luke', 'leia', 'han', 'chewbacca', 'r2-d2', 'c-3po', 'obi-wan', 'yoda',
                    'michael', 'dwight', 'jim', 'pam', 'angela', 'kevin',
                    'stanley', 'phyllis',
-                   'uma', 'xyla', 'hazel', 'dash', 'pixel', 'coco', 'gizmo', 'yara'];
+                   'uma', 'xyla', 'hazel', 'dash', 'pixel', 'coco', 'gizmo', 'yara',
+                   'worker', 'worker2'];
     for (const n of names) {
       const img = new Image();
       img.src = 'assets/char-' + n + '.png';
@@ -98,7 +99,7 @@ const OfficeRenderer = {
       // warm light pool on the floor beneath the office (agents read clearly)
       const pool = g.createRadialGradient(eng.cssW / 2, eng.cssH * 0.72, eng.s(30),
                                           eng.cssW / 2, eng.cssH * 0.72, eng.s(330));
-      pool.addColorStop(0, 'rgba(255,224,170,0.14)');
+      pool.addColorStop(0, 'rgba(255,224,170,0.06)');
       pool.addColorStop(1, 'rgba(255,224,170,0)');
       g.fillStyle = pool;
       g.fillRect(0, 0, w, h);
@@ -139,7 +140,7 @@ const OfficeRenderer = {
     // warm center light pool
     const ctr = this.map(eng, GRID / 2, GRID / 2);
     const grad = g.createRadialGradient(ctr.x, ctr.y, 10, ctr.x, ctr.y, eng.s(330));
-    grad.addColorStop(0, 'rgba(255,244,214,0.55)');
+    grad.addColorStop(0, 'rgba(255,244,214,0.22)');
     grad.addColorStop(1, 'rgba(255,244,214,0)');
     g.fillStyle = grad;
     g.fillRect(0, 0, w, h);
@@ -260,7 +261,7 @@ const OfficeRenderer = {
     g.fillRect(0, 0, w, eng.s(60));
     // warm/cool split-tone: warm light from top, cool-green shadows
     const warm = g.createLinearGradient(0, 0, 0, h * 0.55);
-    warm.addColorStop(0, 'rgba(255,244,226,0.10)');
+    warm.addColorStop(0, 'rgba(255,244,226,0.04)');
     warm.addColorStop(1, 'rgba(255,244,226,0)');
     g.fillStyle = warm;
     g.fillRect(0, 0, w, h * 0.55);
@@ -446,7 +447,14 @@ const OfficeRenderer = {
     const hue = look.hue || a.color;
     // THEMED SPRITE: if this agent has character art, draw it instead of the capsule
     const spriteKey = (a.name || '').toLowerCase();
-    const spr = this.sprites[spriteKey];
+    let spr = this.sprites[spriteKey];
+    if (!(spr && spr.complete && spr.naturalWidth > 0)) {
+      // unified-style fallback: generic office worker (custom offices) — never
+      // fall back to the old capsule renderer, which breaks the art style
+      let hsh = 0;
+      for (let i = 0; i < a.id.length; i++) hsh = (hsh * 31 + a.id.charCodeAt(i)) >>> 0;
+      spr = this.sprites[hsh % 2 ? 'worker' : 'worker2'];
+    }
     if (spr && spr.complete && spr.naturalWidth > 0) {
       this.drawSpriteAgent(eng, ctx, a, c, u, spr);
       return;
@@ -491,8 +499,8 @@ const OfficeRenderer = {
        and makes the cast the focal point (per the art-direction spec) */
     const darkTheme = !!(eng.theme && eng.theme.fx && eng.theme.fx.dark);
     const halo = ctx.createRadialGradient(c.x, c.y - u * 6, u * 2, c.x, c.y - u * 6, u * 26);
-    halo.addColorStop(0, darkTheme ? 'rgba(255,236,190,0.45)' : 'rgba(255,236,190,0.30)');
-    halo.addColorStop(0.5, darkTheme ? 'rgba(255,236,190,0.20)' : 'rgba(255,236,190,0.12)');
+    halo.addColorStop(0, darkTheme ? 'rgba(255,236,190,0.20)' : 'rgba(255,236,190,0.12)');
+    halo.addColorStop(0.5, darkTheme ? 'rgba(255,236,190,0.09)' : 'rgba(255,236,190,0.05)');
     halo.addColorStop(1, 'rgba(255,236,190,0)');
     ctx.fillStyle = halo;
     ctx.beginPath();
@@ -666,7 +674,20 @@ const OfficeRenderer = {
     const atDesk = a.home && Math.hypot(a.x - a.home.x, a.y - a.home.y) < 0.4 && !a.moving;
     const working = atDesk && (a.status === 'tool' || a.status === 'thinking' || a.status === 'working');
     const pose = working ? 0.8 : 1;
-    const w = 25 * u * pose, hh = 25 * u * pose;
+    // per-character aspect: the art is chibi-wide (head ≈ body width), so
+    // drawing square boxes makes characters read as wide blobs / giant heads.
+    // Use the same aspect table as the photo renderer: width = height * aspect.
+    const ASPECT = {
+      uma: 0.59, xyla: 1.28, hazel: 0.86, dash: 0.89, pixel: 0.75, coco: 0.71,
+      gizmo: 0.82, yara: 0.59, batman: 0.62, robin: 0.82, catwoman: 0.61,
+      joker: 0.64, bane: 0.8, nightwing: 0.7, batgirl: 0.61, alfred: 0.55,
+      luke: 0.71, leia: 0.73, han: 0.61, chewbacca: 0.91, 'r2-d2': 1.3, 'c-3po': 1.3,
+      'obi-wan': 0.73, yoda: 1.3,
+      michael: 0.59, dwight: 0.71, jim: 1.3, pam: 0.59, angela: 0.45, kevin: 0.57,
+      stanley: 1.3, phyllis: 0.68, worker: 0.89, worker2: 0.54,
+    };
+    const hh = 25 * u * pose;
+    const w = hh * (ASPECT[(a.name || '').toLowerCase()] || 0.62);
     // grounding shadow — scales with the sprite (soft contact shadow)
     const sh = ctx.createRadialGradient(c.x, c.y + u * 3, u * 1.5, c.x, c.y + u * 3, u * 11);
     sh.addColorStop(0, 'rgba(60,45,25,0.35)');
@@ -1151,6 +1172,26 @@ const OfficeRenderer = {
     return t + '…';
   },
 
+  /* word-wrap into up to maxLines lines that each fit maxW */
+  wrapText(ctx, text, maxW, maxLines) {
+    const str = String(text || '');
+    if (ctx.measureText(str).width <= maxW) return [str];
+    const words = str.split(/\s+/);
+    const lines = [];
+    let cur = '';
+    for (const word of words) {
+      const trial = cur ? cur + ' ' + word : word;
+      if (ctx.measureText(trial).width <= maxW || !cur) cur = trial;
+      else { lines.push(cur); cur = word; }
+    }
+    if (cur) lines.push(cur);
+    if (lines.length > maxLines) {
+      lines[maxLines - 1] = this.fitText(ctx, lines[maxLines - 1] + '…', maxW);
+      return lines.slice(0, maxLines);
+    }
+    return lines;
+  },
+
   drawLabels(eng, ctx) {
     const now = performance.now() / 1000;
     // speech bubbles (top-most) — collision-resolved: newer bubbles win, older
@@ -1158,7 +1199,7 @@ const OfficeRenderer = {
     const active = [...eng.agents.values()]
       .filter(a => a.bubble.text && now < a.bubble.until)
       .sort((x, y) => y.bubble.until - x.bubble.until)
-      .slice(0, 3);   // cap simultaneous bubbles — the roster carries full status
+      .slice(0, 1);   // ONE bubble at a time — the newest. Zero bubble-stack clutter.
     const used = [];
     const s = eng.scale;
     // highlight the NEWEST bubble, fade older ones (less visual noise)
@@ -1167,11 +1208,12 @@ const OfficeRenderer = {
       const c = this.map(eng, a.x, a.y);
       ctx.font = `600 ${11 * s}px ${monoFont()}`;
       const iw = a.bubble.icon ? 16 * s + 5 * s : 0;
-      const maxW = 150 * s - iw - 18 * s;
-      const text = this.fitText(ctx, a.bubble.text, maxW);
-      const tw = ctx.measureText(text).width;
-      const w = Math.min(tw + iw + 18 * s, 150 * s);
-      const h = 22 * s;
+      const maxW = 172 * s - iw - 18 * s;
+      const lines = this.wrapText(ctx, a.bubble.text, maxW, 2);
+      let tw = 0;
+      for (const ln of lines) tw = Math.max(tw, ctx.measureText(ln).width);
+      const w = Math.min(tw + iw + 18 * s, 172 * s);
+      const h = (lines.length > 1 ? 34 : 22) * s;
       let bx = clamp(c.x - w / 2, 4 * s, eng.cssW - w - 4 * s);
       let by = c.y - eng.s(46) - h - 6 * s;
       for (let tries = 0; tries < 6; tries++) {
@@ -1183,7 +1225,7 @@ const OfficeRenderer = {
       }
       if (by < 8 * s) continue;        // clipped by the header — newer bubble wins
       used.push({ x: bx, y: by, w, h });
-      this.drawBubble(eng, ctx, a, bx, by, w, h, text, rank / Math.max(1, active.length));
+      this.drawBubble(eng, ctx, a, bx, by, w, h, lines, rank / Math.max(1, active.length));
       rank++;
     }
     // nametag pills — botvillage style: tiny bold monospace on a rounded pill
@@ -1221,10 +1263,10 @@ const OfficeRenderer = {
     ctx.textAlign = 'left';
   },
 
-  drawBubble(eng, ctx, a, bx, by, w, h, text, dim) {
+  drawBubble(eng, ctx, a, bx, by, w, h, lines, dim) {
     const s = eng.scale;
     const icon = a.bubble.icon;
-    if (!text) text = a.bubble.text;
+    if (!lines) lines = [a.bubble.text];
     const x = bx + w / 2, y = by + h + 6 * s;
     ctx.globalAlpha = dim != null ? 0.82 - dim * 0.35 : 1;
     ctx.fillStyle = 'rgba(255,253,246,0.95)';
@@ -1247,7 +1289,14 @@ const OfficeRenderer = {
     }
     ctx.font = `600 ${11 * s}px ${monoFont()}`;
     ctx.textAlign = 'center';
-    ctx.fillText(text, bx + w / 2 + (icon ? 16 * s + 5 * s : 0) / 2, by + h / 2 + 4 * s);
+    const tx = bx + w / 2 + (icon ? (16 * s + 5 * s) / 2 : 0);
+    if (lines.length > 1) {
+      lines.forEach((ln, i) => {
+        ctx.fillText(ln, tx, by + h / 2 + (i - (lines.length - 1) / 2) * 13 * s + 4 * s);
+      });
+    } else {
+      ctx.fillText(lines[0] || '', tx, by + h / 2 + 4 * s);
+    }
     ctx.textAlign = 'left';
     ctx.globalAlpha = 1;
   },

@@ -20,14 +20,16 @@ const DunderRenderer = {
                    'stanley', 'phyllis',
                    'uma', 'xyla', 'hazel', 'dash', 'pixel', 'coco', 'gizmo', 'yara',
                    'batman', 'robin', 'catwoman', 'joker', 'bane', 'nightwing',
-                   'luke', 'leia', 'han', 'chewbacca', 'r2-d2', 'c-3po'];
+                   'batgirl', 'alfred',
+                   'luke', 'leia', 'han', 'chewbacca', 'r2-d2', 'c-3po',
+                   'obi-wan', 'yoda', 'worker', 'worker2'];
     for (const n of names) {
       const img = new Image();
       img.src = 'assets/char-' + n + '.png';
       this.sprites[n] = img;
     }
     const img = new Image();
-    img.src = 'assets/dunder-real-office.png';
+    img.src = 'assets/dunder-backdrop-painted.png';
     img.onload = () => { this.backdrop = img; if (eng.renderer === this) eng.resize(); };
     this._flakes = [];
     for (let i = 0; i < 24; i++) {
@@ -331,12 +333,13 @@ const DunderRenderer = {
      relative to its height, so drawing square boxes makes characters overlap */
   _aspect(name) {
     const A = {
-      uma: 0.64, xyla: 1.00, hazel: 0.96, dash: 0.77, pixel: 0.57, coco: 0.64,
-      gizmo: 0.48, yara: 0.50, batman: 0.45, robin: 0.45, catwoman: 0.63,
-      joker: 0.43, bane: 0.61, nightwing: 0.46, luke: 0.75, leia: 0.61,
-      han: 0.61, chewbacca: 0.63, 'r2-d2': 0.80, 'c-3po': 0.59,
-      michael: 0.52, dwight: 0.71, jim: 0.53, pam: 0.64, angela: 0.50, kevin: 0.57,
-      stanley: 0.54, phyllis: 0.38,
+      uma: 0.59, xyla: 1.28, hazel: 0.86, dash: 0.89, pixel: 0.75, coco: 0.71,
+      gizmo: 0.82, yara: 0.59, batman: 0.62, robin: 0.82, catwoman: 0.61,
+      joker: 0.64, bane: 0.8, nightwing: 0.7, batgirl: 0.61, alfred: 0.55,
+      luke: 0.71, leia: 0.73, han: 0.61, chewbacca: 0.91, 'r2-d2': 1.3, 'c-3po': 1.3,
+      'obi-wan': 0.73, yoda: 1.3,
+      michael: 0.59, dwight: 0.71, jim: 1.3, pam: 0.59, angela: 0.45, kevin: 0.57,
+      stanley: 1.3, phyllis: 0.68, worker: 0.89, worker2: 0.54,
     };
     return A[(name || '').toLowerCase()] || 0.62;
   },
