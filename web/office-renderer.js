@@ -592,12 +592,32 @@ const OfficeRenderer = {
     // accessory drawn in world space (cape behind, props beside)
     this.drawAccessory(eng, ctx, a, look, c, y, u, now);
 
-    // tool chip
+    // tool chip — action badge (botvillage work-overlay style): rounded pill
+    // with the tool icon, floating just above the head when working
     if (a.status === 'tool' && !(a.bubble.text && now < a.bubble.until)) {
-      ctx.font = `${15 * u}px sans-serif`;
+      const tw = 12 * u;
+      const bx = c.x - tw / 2, by = y - 34 * u;
+      ctx.fillStyle = 'rgba(30,26,40,0.72)';
+      ctx.beginPath();
+      ctx.roundRect(bx, by, tw, 16 * u, 8 * u);
+      ctx.fill();
+      ctx.font = `${11 * u}px sans-serif`;
       ctx.textAlign = 'center';
-      ctx.fillText(toolIcon(a.currentTool), c.x, y - 28 * u);
+      ctx.fillText(toolIcon(a.currentTool), c.x, by + 11.5 * u);
       ctx.textAlign = 'left';
+    }
+    // Zzz sleep tell for long-quiet idle agents (botvillage: never hide idle bots)
+    if (a.status === 'idle' && now - (a.arrivedAt || 0) > 25 && !a.moving) {
+      const zz = (Math.sin(now * 1.7 + a.id.length) + 1) * 0.5;
+      ctx.globalAlpha = 0.35 + 0.4 * zz;
+      ctx.font = `700 ${9 * u}px ${monoFont()}`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#5a6a7a';
+      ctx.fillText('z', c.x + 10 * u, y - 26 * u - zz * 2 * u);
+      ctx.font = `700 ${7 * u}px ${monoFont()}`;
+      ctx.fillText('z', c.x + 15 * u, y - 31 * u - zz * 2 * u);
+      ctx.textAlign = 'left';
+      ctx.globalAlpha = 1;
     }
     // working indicator: spinning gear above active agents
     if ((a.status === 'tool' || a.status === 'thinking') && !(a.bubble.text && now < a.bubble.until)) {
@@ -1161,20 +1181,37 @@ const OfficeRenderer = {
       this.drawBubble(eng, ctx, a, bx, by, w, h, text, rank / Math.max(1, active.length));
       rank++;
     }
-    // hover name tags
-    ctx.font = `700 ${eng.s(10.5)}px ${monoFont()}`;
+    // nametag pills — botvillage style: tiny bold monospace on a rounded pill
+    // under each character, collision-resolved so they never overlap bubbles
+    ctx.font = `700 ${eng.s(8.5)}px ${monoFont()}`;
     ctx.textAlign = 'center';
-    if (eng.hoverAgent) {
-      const a = eng.agents.get(eng.hoverAgent);
-      if (a) {
-        const c = this.map(eng, a.x, a.y);
-        const tw = ctx.measureText(a.name).width;
-        ctx.fillStyle = 'rgba(30,25,40,0.85)';
-        eng.roundRectPath(ctx, c.x - tw / 2 - eng.s(6), c.y - eng.s(40), tw + eng.s(12), eng.s(16), eng.s(8));
-        ctx.fill();
-        ctx.fillStyle = '#f7f3ea';
-        ctx.fillText(a.name, c.x, c.y - eng.s(28));
+    const pills = [];
+    for (const a of eng.agents.values()) {
+      const c = this.map(eng, a.x, a.y);
+      const tw = ctx.measureText(a.name).width;
+      const pw = tw + eng.s(10), ph = eng.s(12);
+      let px = clamp(c.x - pw / 2, 2 * s, eng.cssW - pw - 2 * s);
+      let py = c.y - eng.s(6);
+      // avoid other pills + speech bubbles (drawn above)
+      for (let tries = 0; tries < 5; tries++) {
+        const clash = pills.some(p =>
+          px < p.x + p.w + 4 * s && px + pw + 4 * s > p.x &&
+          py < p.y + p.h + 3 * s && py + ph + 3 * s > p.y);
+        const bubbleClash = used.some(r =>
+          px < r.x + r.w + 4 * s && px + pw + 4 * s > r.x &&
+          py < r.y + r.h + 3 * s && py + ph + 3 * s > r.y);
+        if (!clash && !bubbleClash) break;
+        py += ph + 3 * s;
       }
+      pills.push({ x: px, y: py, w: pw, h: ph });
+      const dim = eng.hoverAgent === a.id ? 1 : 0.72;
+      ctx.globalAlpha = dim;
+      ctx.fillStyle = 'rgba(28,24,36,0.78)';
+      eng.roundRectPath(ctx, px, py, pw, ph, ph / 2);
+      ctx.fill();
+      ctx.fillStyle = '#f4efe6';
+      ctx.fillText(a.name, px + pw / 2, py + ph - eng.s(3.2));
+      ctx.globalAlpha = 1;
     }
     ctx.textAlign = 'left';
   },
