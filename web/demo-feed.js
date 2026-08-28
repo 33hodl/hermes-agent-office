@@ -57,13 +57,18 @@ function startClientDemo(handleEvent, onStatus) {
   };
 
   CLIENT_DEMO_NAMES.forEach((name, idx) => setTimeout(() => spawn(name), 400 + idx * 3500));
-  // keep the office busy: new waves of tasks forever (continuous workflow)
+  // keep the office busy: new waves of tasks forever (continuous workflow).
+  // Demo roster is capped at the cast size so desks never double-book.
+  const cap = () => (window.__activeTheme && window.__activeTheme.agentNames
+    ? window.__activeTheme.agentNames.length : CLIENT_DEMO_NAMES.length);
   let wave = 0;
   const loop = setInterval(() => {
-    const name = CLIENT_DEMO_NAMES[wave % CLIENT_DEMO_NAMES.length];
+    const names = (window.__activeTheme && window.__activeTheme.agentNames) || CLIENT_DEMO_NAMES;
+    const name = names[wave % names.length];
     wave += 1;
     spawn(name);
     if (wave > 40) clearInterval(loop);
   }, 22000);
   onStatus('demo · in-browser');
+  return cap;
 }

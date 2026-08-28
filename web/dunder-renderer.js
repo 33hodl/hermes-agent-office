@@ -40,18 +40,16 @@ const DunderRenderer = {
 
   /* grid -> screen: x maps to horizontal position, y scales (back = smaller) */
   map(eng, x, y) {
-    // scale-aware: the grid fits the viewport instead of using fixed fractions
+    // The real set photo: the floor occupies the bottom 44% of the image (the
+    // back wall meets the carpet at ~56% height). Grid y=0 sits at that junction,
+    // y=10 at the bottom edge — agents stand ON the carpet, not on the walls.
     const depth = 0.72 + 0.28 * (y / 10);
     const s = eng.scale || 1;
     const mobile = eng.cssW < 860;
-    // desktop: spread the office grid across the middle band of the scene so
-    // stations/labels/characters are separated (no more bottom-third squeeze)
     const sx = mobile
       ? eng.cssW * 0.06 + (x / 10) * (eng.cssW * 0.88)
-      : eng.cssW * (0.08 + 0.84 * (x / 10));
-    const sy = mobile
-      ? eng.cssH * 0.42 + (y / 10) * (eng.cssH * 0.42) * (1.15 - depth * 0.4)
-      : eng.cssH * (0.30 + (y / 10) * 0.52);
+      : eng.cssW * (0.12 + 0.82 * (x / 10));
+    const sy = eng.cssH * (0.56 + 0.42 * (y / 10));
     return { x: sx, y: sy, d: depth };
   },
 
@@ -69,7 +67,8 @@ const DunderRenderer = {
     const g = layer.getContext('2d');
     const p = eng.theme.props;
 
-    // backdrop cover
+    // backdrop: COVER, height-limited (the floor + desks live in the bottom 44%
+    // of the photo — the full photo height must stay visible; crop width only)
     if (this.backdrop) {
       const iw = this.backdrop.width, ih = this.backdrop.height;
       const ar = iw / ih, tar = w / h;
@@ -77,9 +76,12 @@ const DunderRenderer = {
       if (ar > tar) { dw = h * ar; dx = -(dw - w) / 2; }
       else { dh = w / ar; dy = -(dh - h) / 2; }
       g.drawImage(this.backdrop, dx, dy, dw, dh);
+      // remember the drawn photo scale so sprites size to the SET, not the canvas
+      this._photoDH = dh;
     } else {
       g.fillStyle = '#d9c9a8';
       g.fillRect(0, 0, w, h);
+      this._photoDH = h;
     }
 
     // ground shadow strip at the very bottom (the backdrop already has a floor)
@@ -161,6 +163,36 @@ const DunderRenderer = {
     // mailbox glow + toss burst handled by particles
     eng.particles.draw(ctx, eng.scale);
 
+    // speech bubbles (2D style) — collision-resolved, newer bubbles win.
+    // Rects are computed FIRST so sticky-note labels never collide with them.
+    const s = eng.scale;
+    const active = [...eng.agents.values()]
+      .filter(a => a.bubble.text && now < a.bubble.until)
+      .sort((x, y) => y.bubble.until - x.bubble.until);
+    const used = [];
+    const bubbleRects = [];
+    for (const a of active) {
+      const c = this.map(eng, a.x, a.y);
+      const hh = this.spriteH(eng, c.d);
+      ctx.font = `700 ${11 * s}px ${monoFont()}`;
+      const text = this.fitText(ctx, a.bubble.text, 160 * s - 20 * s);
+      const tw = ctx.measureText(text).width;
+      const w = Math.min(tw + 20 * s, 160 * s);
+      const h = 24 * s;
+      let bx = clamp(c.x - w / 2, 4 * s, eng.cssW - w - 4 * s);
+      let by = c.y - hh - 14 * s - h;
+      for (let tries = 0; tries < 6; tries++) {
+        const clash = used.some(r =>
+          bx < r.x + r.w + 6 * s && bx + w + 6 * s > r.x &&
+          by < r.y + r.h + 6 * s && by + h + 6 * s > r.y);
+        if (!clash) break;
+        by -= h + 8 * s;              // stack upward
+      }
+      if (by < 8 * s) continue;        // clipped — newer bubble wins
+      used.push({ x: bx, y: by, w, h });
+      bubbleRects.push({ x: bx, y: by, w, h, a, text });
+    }
+
     // labels: hand-written sticky notes (production polish)
     const mobile = eng.cssW < 860;
     // on mobile, only show the most important labels (declutter)
@@ -169,18 +201,25 @@ const DunderRenderer = {
       : (st) => true;
     ctx.textAlign = 'center';
     ctx.font = `800 ${eng.s(mobile ? 9 : 11)}px ${monoFont()}`;
-    // per-station deterministic lift so back-row labels never collide
+    // per-station deterministic lift so back-row labels never collide with the
+    // characters standing there (labels sit above the sprite's head)
     const lift = { michael: 52, conference: 34, breakroom: 20, annex: 18, warehouse: 14, mail: 12 };
     for (const st of eng.theme.stations) {
       if (!labelFilter(st)) continue;
       const c = this.map(eng, st.x, st.y);
+      const spriteH = this.spriteH(eng, c.d); // standing sprite at this depth
       const back = st.y < 3.5;
       const front = st.type === 'reception' || st.type === 'mail';
       const extra = lift[st.id] || 0;
-      const ly = (back ? c.y - eng.s((mobile ? 30 : 44) + extra)
-                 : front ? c.y - eng.s((mobile ? 26 : 40) + extra)
-                 : c.y - eng.s((mobile ? 16 : 26) + extra));
+      const ly = back ? c.y - eng.s((mobile ? 30 : 44) + extra) - spriteH
+                 : front ? c.y - eng.s((mobile ? 26 : 40) + extra) - spriteH
+                 : c.y - eng.s((mobile ? 16 : 26) + extra) - spriteH;
       const tw = ctx.measureText(st.label.toUpperCase()).width;
+      // skip if a speech bubble occupies this label's spot
+      const lh = eng.s(mobile ? 10 : 17);
+      if (bubbleRects.some(r =>
+        c.x - tw / 2 < r.x + r.w + 4 * s && c.x + tw / 2 + 4 * s > r.x &&
+        ly - lh < r.y + r.h && ly > r.y)) continue;
       const rot = (st.id.length % 5 - 2) * 0.02; // tiny per-label rotation, hand-placed feel
       ctx.save();
       ctx.translate(c.x, ly - eng.s(5));
@@ -199,36 +238,23 @@ const DunderRenderer = {
       ctx.fillText(st.label.toUpperCase(), 0, 0);
       ctx.restore();
     }
-    // name tags (always on for the cast, plus hover for the rest) — hidden on mobile
-    const tags = [...eng.agents.values()];
-    if (mobile) { /* name tags off on small screens; bubbles carry identity */ }
-    for (const a of tags) {
+    // name tags: hover only — always-on tags pile up over the real set + sprites
+    ctx.textAlign = 'center';
+    ctx.font = `700 ${eng.s(10.5)}px ${monoFont()}`;
+    for (const a of eng.agents.values()) {
       // grounding shadow so characters sit ON the painted floor
       const c0 = this.map(eng, a.x, a.y);
-      const sh = ctx.createRadialGradient(c0.x, c0.y + eng.s(4), eng.s(1), c0.x, c0.y + eng.s(4), eng.s(12));
-      sh.addColorStop(0, 'rgba(60,45,25,0.30)');
-      sh.addColorStop(1, 'rgba(60,45,25,0)');
-      ctx.fillStyle = sh;
-      ctx.beginPath();
-      ctx.ellipse(c0.x, c0.y + eng.s(4), eng.s(12), eng.s(3.5), 0, 0, Math.PI * 2);
-      ctx.fill();
-      if (eng.hoverAgent === a.id || tags.length <= 8) {
-        const c = this.map(eng, a.x, a.y);
+      if (eng.hoverAgent === a.id) {
         const tw = ctx.measureText(a.name).width;
         ctx.fillStyle = 'rgba(40,30,20,0.9)';
-        eng.roundRectPath(ctx, c.x - tw / 2 - eng.s(6), c.y - eng.s(74), tw + eng.s(12), eng.s(16), eng.s(8));
+        eng.roundRectPath(ctx, c0.x - tw / 2 - eng.s(6), c0.y - this.spriteH(eng, c0.d) - eng.s(14), tw + eng.s(12), eng.s(16), eng.s(8));
         ctx.fill();
         ctx.fillStyle = '#fdfaf0';
-        ctx.fillText(a.name, c.x, c.y - eng.s(62));
+        ctx.fillText(a.name, c0.x, c0.y - this.spriteH(eng, c0.d) - eng.s(2));
       }
     }
-    // speech bubbles (2D style)
-    for (const a of eng.agents.values()) {
-      if (a.bubble.text && now < a.bubble.until) {
-        const c = this.map(eng, a.x, a.y);
-        this.drawBubble(eng, ctx, a, c.x, c.y - eng.s(96));
-      }
-    }
+    // draw the speech bubbles on top
+    for (const r of bubbleRects) this.drawBubble(eng, ctx, r.a, r.x, r.y, r.w, r.h, r.text);
     ctx.textAlign = 'left';
 
     // tilt-shift DOF bands (soften top/bottom edges)
@@ -256,19 +282,64 @@ const DunderRenderer = {
     this._blurBottom = bot;
   },
 
+  /* truncate bubble text so it never spills out of the bubble rect */
+  fitText(ctx, text, maxW) {
+    let t = String(text || '');
+    if (ctx.measureText(t).width <= maxW) return t;
+    while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+    return t + '…';
+  },
+
+  /* standing character height at a given depth — sized to the DRAWN PHOTO.
+     Small chibi villagers on the big set (the poteto/viral look): ~0.6 of a
+     cubicle partition, so they read as people, never as monsters. */
+  spriteH(eng, d) {
+    return (this._photoDH || eng.cssH) * 0.22 * d * (eng.zoom || 1);
+  },
+
+  /* content aspect (width/height) of each char sprite — the art is chibi-wide
+     relative to its height, so drawing square boxes makes characters overlap */
+  _aspect(name) {
+    const A = {
+      uma: 0.64, xyla: 1.00, hazel: 0.96, dash: 0.77, pixel: 0.57, coco: 0.64,
+      gizmo: 0.48, yara: 0.50, batman: 0.45, robin: 0.45, catwoman: 0.63,
+      joker: 0.43, bane: 0.61, nightwing: 0.46, luke: 0.75, leia: 0.61,
+      han: 0.61, chewbacca: 0.63, 'r2-d2': 0.80, 'c-3po': 0.59,
+      michael: 0.52, dwight: 0.71, jim: 0.53, pam: 0.64, angela: 0.50, kevin: 0.57,
+    };
+    return A[(name || '').toLowerCase()] || 0.62;
+  },
+
+  /* cast members without their own art reuse a visually-close sprite so nobody
+     ever falls back to the tiny capsule (Stanley → Kevin's build, Phyllis → Pam) */
+  _spriteName(name) {
+    const n = (name || '').toLowerCase();
+    if (n === 'stanley') return 'kevin';
+    if (n === 'phyllis') return 'pam';
+    return n;
+  },
+
   drawAgent(eng, ctx, a, now) {
     const c = this.map(eng, a.x, a.y);
     const s = eng.scale * c.d;
-    // themed character sprite when available (recognizable cast, correct scale)
-    const spr = this.sprites[(a.name || '').toLowerCase()];
+    // themed character sprite when available (recognizable cast, human scale:
+    // a standing adult ≈ 38% of canvas height at full depth, scaled by depth)
+    const sprName = this._spriteName(a.name);
+    const spr = this.sprites[sprName];
     if (spr && spr.complete && spr.naturalWidth > 0) {
-      const w = 108 * s, hh = 108 * s;
+      const hh = this.spriteH(eng, c.d);
+      const w = hh * this._aspect(a.name);
       const bob = a.moving ? Math.sin(a.walkPhase) * 1.5 * s : Math.sin(a.walkPhase * 0.55) * 0.8 * s;
-      ctx.fillStyle = 'rgba(50,40,25,0.25)';
+      // soft contact shadow scaled to the sprite
+      ctx.fillStyle = 'rgba(50,40,25,0.28)';
       ctx.beginPath();
-      ctx.ellipse(c.x, c.y + 3 * s, 18 * s, 5.5 * s, 0, 0, Math.PI * 2);
+      ctx.ellipse(c.x, c.y + 3 * s, w * 0.42, Math.max(4 * s, w * 0.10), 0, 0, Math.PI * 2);
       ctx.fill();
+      // warm the sprite to the set's tungsten light so it reads less "sticker"
+      ctx.save();
+      ctx.filter = 'sepia(0.12) saturate(0.92) brightness(1.03)';
       ctx.drawImage(spr, c.x - w / 2, c.y - hh + bob + 6 * s, w, hh);
+      ctx.restore();
       return;
     }
     const vs = this.agentsV.get(a.id) || { walk: 0, blink: 0, tilt: 0 };
@@ -277,6 +348,13 @@ const DunderRenderer = {
     vs.blink = Math.max(0, vs.blink - (now - (vs._last || now)));
     vs._last = now;
 
+    // Capsule fallback (cast without art): draw at the SAME human scale as the
+    // sprites so no character ever reads as a tiny bug next to a big one.
+    const capF = (this.spriteH(eng, c.d)) / (46 * s);
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(capF, capF);
+    ctx.translate(-c.x, -c.y);
     const y = c.y - 4 * s + bob;
     const color = a.color;
     const dark = shade(color, -60); // deep ink tone
@@ -386,7 +464,7 @@ const DunderRenderer = {
 
     // tool glyph
     if (a.status === 'tool' && !(a.bubble.text && now < a.bubble.until)) {
-      ctx.font = `${14 * s}px sans-serif`;
+      ctx.font = `${14 * s / capF}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.fillText(toolIcon(a.currentTool), c.x, hy - 24 * s);
       ctx.textAlign = 'left';
@@ -394,29 +472,34 @@ const DunderRenderer = {
     // toss (paper slip to inbox)
     if (a.toss > 0) {
       const t = 1 - a.toss / 0.8;
-      const ex = c.x + 26 * s * t;
+      const ex = c.x + 26 * s * t / capF;
       const ey = hy - 34 * s * Math.sin(t * Math.PI);
       ctx.save();
       ctx.translate(ex, ey);
       ctx.rotate(t * 1.2);
       ctx.fillStyle = '#fdfaf0';
       ctx.strokeStyle = '#b8a683';
-      ctx.lineWidth = 1 * s;
-      ctx.fillRect(-8 * s, -6 * s, 16 * s, 12 * s);
+      ctx.lineWidth = 1 * s / capF;
+      ctx.fillRect(-8 * s / capF, -6 * s / capF, 16 * s / capF, 12 * s / capF);
       ctx.stroke();
       ctx.restore();
     }
+    ctx.restore();   // end capsule scale
   },
 
-  drawBubble(eng, ctx, a, x, y) {
+  drawBubble(eng, ctx, a, bx, by, w, h, text) {
     const s = eng.scale;
-    const text = a.bubble.text;
-    ctx.font = `700 ${11 * s}px ${monoFont()}`;
-    const tw = ctx.measureText(text).width;
-    const w = Math.min(tw + 20 * s, 160 * s);
-    const h = 24 * s;
-    const bx = clamp(x - w / 2, 4 * s, eng.cssW - w - 4 * s);
-    const by = y - h - 6 * s;
+    if (!text) text = a.bubble.text;
+    if (!w || !h) {
+      ctx.font = `700 ${11 * s}px ${monoFont()}`;
+      text = this.fitText(ctx, text, 160 * s - 20 * s);
+      const tw = ctx.measureText(text).width;
+      w = Math.min(tw + 20 * s, 160 * s);
+      h = 24 * s;
+      bx = clamp(bx - w / 2, 4 * s, eng.cssW - w - 4 * s);
+      by = by - h;
+    }
+    const x = bx + w / 2, y = by + h + 6 * s;
     ctx.fillStyle = '#fdfaf0';
     ctx.strokeStyle = '#8a7350';
     ctx.lineWidth = 1.6 * s;

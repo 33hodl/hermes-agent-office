@@ -32,7 +32,7 @@ const THEMES = {
       { id: 'mail', label: 'Mailbox', type: 'mail', x: 9, y: 8.5 },
       { id: 'library', label: 'Library', type: 'library', x: 0.8, y: 2.5 },
     ],
-    desks: [[2,2],[3,2],[4,2],[2,3],[3,3],[4,3],[6,2],[7,2],[6,3],[7,3]],
+    desks: [[2,2],[4,2],[6,2],[8,2],[2,4],[4,4],[6,4],[8,4],[2,6],[4,6]],
     plants: [[0.8,5.5],[5.5,0.8],[7.8,8.5],[0.8,8.5]],
   },
 
@@ -60,7 +60,7 @@ const THEMES = {
       { id: 'mail', label: 'Mail Terminal', type: 'mail', x: 9, y: 8.5 },
       { id: 'library', label: 'Context Vault', type: 'library', x: 0.8, y: 2.5 },
     ],
-    desks: [[2,2],[3,2],[4,2],[2,3],[3,3],[4,3],[6,2],[7,2],[6,3],[7,3]],
+    desks: [[2.5,2.5],[4.5,2.5],[6.5,2.5],[8.5,2.5],[2.5,4.5],[4.5,4.5],[6.5,4.5],[8.5,4.5],[2.5,6.5],[4.5,6.5]],
     plants: [[0.8,5.5],[5.5,0.8],[7.8,8.5],[0.8,8.5]],
   },
 
@@ -90,7 +90,7 @@ const THEMES = {
       { id: 'mail', label: 'Inbox', type: 'mail', x: 3.6, y: 9.6 },
       { id: 'warehouse', label: 'Warehouse', type: 'warehouse', x: 9.6, y: 9.4 },
     ],
-    desks: [[3.2,3.2],[4.2,3.2],[5.2,3.2],[3.2,4.2],[4.2,4.2],[5.2,4.2],[6.0,7.8],[7.0,7.8],[6.0,8.6],[7.0,8.6]],
+    desks: [[1.8,3.2],[5.2,3.2],[8.6,3.2],[1.8,5.0],[5.2,5.0],[8.6,5.0],[3.5,6.6],[7.0,6.6]],
     plants: [[2.4,6.6],[6.2,0.8],[0.8,2.6],[7.6,8.8]],
   },
 
@@ -109,7 +109,7 @@ const THEMES = {
       book: ['#8a6fd8', '#5a8ae8', '#e8c04a', '#e8737c'],
     },
     fx: { dark: true },
-    desks: [[2.5,2.5],[4,2.5],[5.5,2.5],[7,3.5],[3,4.5],[5,5.5],[7.5,6.5]],
+    desks: [[2.5,2.5],[4.5,2.5],[6.5,2.5],[8.5,2.5],[2.5,4.5],[4.5,4.5],[6.5,4.5],[8.5,4.5],[2.5,6.5],[4.5,6.5]],
     plants: [[0.8,5.5],[5.5,0.8],[7.8,8.5],[0.8,8.5]],
     stations: [
       { id: 'entrance', label: 'Batcave Entrance', type: 'entrance', x: 0.5, y: 7.2 },
@@ -138,7 +138,7 @@ const THEMES = {
       book: ['#e8c04a', '#e8737c', '#5a8ae8', '#7a9a5a'],
     },
     fx: { dark: true },
-    desks: [[2.5,2.5],[4,2.5],[5.5,2.5],[7,3.5],[3,4.5],[5,5.5],[7.5,6.5]],
+    desks: [[2.5,2.5],[4.5,2.5],[6.5,2.5],[8.5,2.5],[2.5,4.5],[4.5,4.5],[6.5,4.5],[8.5,4.5],[2.5,6.5],[4.5,6.5]],
     plants: [[0.8,5.5],[5.5,0.8],[7.8,8.5],[0.8,8.5]],
     stations: [
       { id: 'entrance', label: 'Hangar Door', type: 'entrance', x: 0.5, y: 7.2 },
@@ -247,7 +247,19 @@ function handleEvent(ev) {
   store.lastEventId = Math.max(store.lastEventId, ev.id);
   let a = eng.agents.get(ev.agent_id);
   if (!a) {
-    if (ev.type === 'agent_enter') a = eng.addAgent(agentFromStore(ev));
+    if (ev.type === 'agent_enter') {
+      // roster cap: never exceed the theme's cast so desks don't double-book.
+      // Evict oldest agents down to cap-1 (handles SSE history replays that can
+      // deliver many enters at once), then add the newcomer.
+      const capN = (window.__activeTheme && window.__activeTheme.agentNames)
+        ? window.__activeTheme.agentNames.length : 8;
+      const ids = [...eng.agents.keys()];
+      while (eng.agents.size >= capN && ids.length) {
+        const old = ids.shift();
+        if (eng.agents.has(old)) eng.agents.delete(old);
+      }
+      a = eng.addAgent(agentFromStore(ev));
+    }
     else return;
   }
   switch (ev.type) {
@@ -373,7 +385,22 @@ function startOfflineDemo() {
     '<button class="banner-x" aria-label="Dismiss">✕</button>';
   banner.querySelector('.banner-x').addEventListener('click', () => banner.remove());
   document.body.appendChild(banner);
-  startClientDemo(handleEvent, (label) => { $('live-label').textContent = label; });
+  // keep the roster within the theme's cast: when a new wave spawns beyond the
+  // cap, retire the oldest agent so desks never double-book
+  const capped = (ev) => {
+    if (ev.type === 'agent_enter') {
+      const capN = (window.__activeTheme && window.__activeTheme.agentNames)
+        ? window.__activeTheme.agentNames.length : 6;
+      const ids = [...eng.agents.keys()];
+      while (ids.length >= capN) {
+        const old = ids.shift();
+        const a = eng.agents.get(old);
+        if (a && a.status === 'idle' && !a.leaving) { eng.removeAgent(old); break; }
+      }
+    }
+    handleEvent(ev);
+  };
+  startClientDemo(capped, (label) => { $('live-label').textContent = label; });
   // seed a few deliveries so the mailbox isn't empty
   for (const name of CLIENT_DEMO_NAMES.slice(0, 3)) {
     handleEvent({
@@ -396,6 +423,14 @@ async function fetchState() {
     for (const ag of st.agents) {
       store.agents.set(ag.id, ag);
       if (!eng.agents.has(ag.id)) {
+        // same roster cap as handleEvent — /api/state replays can exceed the cast
+        const capN = (window.__activeTheme && window.__activeTheme.agentNames)
+          ? window.__activeTheme.agentNames.length : 8;
+        const ids = [...eng.agents.keys()];
+        while (eng.agents.size >= capN && ids.length) {
+          const old = ids.shift();
+          if (eng.agents.has(old)) eng.agents.delete(old);
+        }
         const ca = eng.addAgent(agentFromStore({ agent_id: ag.id, agent: ag.name, role: ag.role, model: ag.model }));
         ca.status = ag.status; ca.activity = ag.activity; ca.task = ag.task;
         ca.tokens = ag.tokens; ca.tools = ag.tools; ca.steps = ag.steps;
@@ -722,6 +757,7 @@ function applyTheme(name) {
   const theme = THEMES[name] || CUSTOM_THEMES[name];
   if (!theme) return;
   activeCustomTheme = CUSTOM_THEMES[name] || null;
+  window.__activeTheme = theme;
   window.__activeCustomTheme = activeCustomTheme;
   eng.setTheme(theme);
   eng.setRenderer(RENDERERS[theme.renderer || 'office']);
@@ -746,17 +782,19 @@ function applyTheme(name) {
   } else if (eng.renderer) {
     eng.renderer.customBackdrop = null;
   }
-  // restaff: RENAME existing agents to the theme's cast (smooth, keeps the roster)
+  // restaff: RENAME ALL existing agents to the theme's cast (cycled, so no
+  // generic leftover names ever survive a theme switch)
   if (theme.agentNames && theme.agentNames.length) {
-    const pool = theme.agentNames.slice();
+    const pool = theme.agentNames;
+    let i = 0;
     for (const a of eng.agents.values()) {
-      if (!pool.length) break;
-      const nn = pool.shift();
+      const nn = pool[i++ % pool.length];
       if (a.name !== nn) a.name = nn;
     }
     renderRoster();
   }
   relookAgents(); // applies cast looks + dark-theme hue lift AFTER the rename
+  eng.rehome();   // reassign desks from the new theme so agents never cluster
   localStorage.setItem('office-theme', name);
   $('brand-mark').textContent = theme.brand || '🏢';
   for (const btn of document.querySelectorAll('.theme-btn')) {

@@ -156,7 +156,14 @@ class OfficeEngine {
   frame(dt) {
     // idle agents drift back to their home station (no clustering)
     for (const a of this.agents.values()) {
-      if ((a.status === 'idle' || a.status === 'entering') && a.home && !a.moving && !a.leaving) {
+      if (a._seekDesk && a.home && !a.moving && !a.leaving) {
+        const hx = a.home.x + (a.homeOffset || 0), hy = a.home.y;
+        const dx = hx - a.x, dy = hy - a.y;
+        if (Math.hypot(dx, dy) > 0.35) {
+          a.moving = true; a.tx = hx; a.ty = hy; a.walkPhase = a.walkPhase || Math.random() * 10;
+        } else { a._seekDesk = false; }
+      }
+      else if ((a.status === 'idle' || a.status === 'entering') && a.home && !a.moving && !a.leaving) {
         const hx = a.home.x + (a.homeOffset || 0), hy = a.home.y;
         const dx = hx - a.x, dy = hy - a.y;
         if (Math.hypot(dx, dy) > 0.6) {
@@ -200,14 +207,20 @@ class OfficeEngine {
       : (this.theme.stations || []).filter(s => s.type === 'desk').map(s => [s.x, s.y]);
     const deskIdx = this._deskCounter++ % Math.max(desks.length, 1);
     const [hx, hy] = desks.length ? desks[deskIdx] : [ent.x, ent.y];
+    // office renderer: agent sits BEHIND the desk (up-left) so the desk occludes
+    // the lower body — reads as "working at a workstation". dunder renderer: the
+    // photo IS the furniture; stand just in front of the assigned spot instead.
+    const behindDesk = !!(this.renderer && this.renderer.name === 'office');
+    // dunder: the photo IS the furniture — stand ON the assigned spot
+    const home = behindDesk ? { x: hx - 0.3, y: hy - 0.3 } : { x: hx, y: hy };
     const ca = {
       ...a,
       x: ent.x + (deskIdx % 3) * 0.7, y: ent.y + (deskIdx % 2) * 0.5,
       tx: ent.x, ty: ent.y,
-      home: { x: hx, y: hy + 0.55 },
+      home,
       slot: deskIdx % 4,
-      // micro-offset so agents on adjacent desks never overlap
-      homeOffset: ((deskIdx * 0.7) % 2) - 0.5,
+      // desks are 2 cells apart — no side-by-side overlap; keep offsets at zero
+      homeOffset: 0,
       moving: false,
       walkPhase: Math.random() * 10,
       facing: 1,
@@ -222,7 +235,9 @@ class OfficeEngine {
     if (this.renderer && this.renderer.onAgentAdded) this.renderer.onAgentAdded(ca);
     this.agents.set(a.id, ca);
     this.goTo(ca, ent.x, ent.y + 0.5);
-    this.bubble(ca, 'Arrived', null, 3);
+    // right after arriving, head to the assigned desk (spread, no door clustering)
+    ca._seekDesk = true;
+    this.bubble(ca, flavorFor ? (flavorFor(ca.name) || 'Arrived') : 'Arrived', null, 3);
     return ca;
   }
 
@@ -233,6 +248,23 @@ class OfficeEngine {
     if (!ent) { this.agents.delete(id); return; }
     this.goTo(a, ent.x, ent.y + 0.5);
     a.leaving = true;
+  }
+
+  /* reassign every live agent a desk from the CURRENT theme (theme switch) */
+  rehome() {
+    const desks = (this.theme.desks || []).length
+      ? this.theme.desks
+      : (this.theme.stations || []).filter(s => s.type === 'desk').map(s => [s.x, s.y]);
+    if (!desks.length) return;
+    const behindDesk = !!(this.renderer && this.renderer.name === 'office');
+    let i = 0;
+    for (const a of this.agents.values()) {
+      const [hx, hy] = desks[i++ % desks.length];
+      a.home = behindDesk ? { x: hx - 0.3, y: hy - 0.3 } : { x: hx, y: hy };
+      a.homeOffset = 0;
+      a._seekDesk = true;   // walk to the new desk
+      a.leaving = false;
+    }
   }
 
   goTo(a, x, y) { a.tx = x; a.ty = y; }

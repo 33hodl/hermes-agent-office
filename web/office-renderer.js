@@ -60,7 +60,10 @@ const OfficeRenderer = {
     const mfit = eng.cssW < 860 ? Math.min(eng.cssW / 250, eng.cssH / 470) : fit;
     eng.scale = clamp(mfit, 0.45, 1.7) * (eng.zoom || 1);
     eng.ox = eng.cssW / 2;
-    eng.oy = eng.cssW < 860 ? eng.cssH * 0.33 : eng.cssH / 2 + 24;
+    // center the ROOM vertically (grid center (5,5) maps to oy + 10*TILE/4*scale),
+    // so the bottom desk rows stay on canvas on wide/short screens
+    const midY = GRID * (TILE / 4) * eng.scale;
+    eng.oy = eng.cssH * 0.52 - midY;
     this._buildStatic(eng);
   },
 
@@ -286,8 +289,8 @@ const OfficeRenderer = {
     const p = eng.theme.props;
     // plants
     for (const [px, py] of eng.theme.plants) this.drawPlant(eng, g, px, py, p.pot, p.plant);
-    // desk clusters
-    for (const [dx, dy] of eng.theme.desks) this.drawDesk(eng, g, dx, dy, p);
+    // NOTE: desks are drawn per-frame (dynamic) so agents can be occluded by them
+    // in painter's order — see draw().
     // meeting table
     const mt = eng.theme.stations.find(s => s.type === 'meeting');
     if (mt) {
@@ -401,9 +404,19 @@ const OfficeRenderer = {
       ctx.stroke();
     }
 
-    // agents (painter's order)
-    const sorted = [...eng.agents.values()].sort((a, b) => (a.y + a.x) - (b.y + b.x));
-    for (const a of sorted) this.drawAgent(eng, ctx, a);
+    // agents + desks (painter's order: lower (x+y) drawn first, so desks
+    // occlude agents standing behind them and read as "working at the desk")
+    const items = [];
+    for (const [dx, dy] of eng.theme.desks) {
+      items.push({ key: dx + dy, kind: 'desk', x: dx, y: dy });
+    }
+    for (const a of eng.agents.values()) items.push({ key: a.x + a.y, kind: 'agent', a });
+    items.sort((p, q) => p.key - q.key);
+    const props = eng.theme.props;
+    for (const it of items) {
+      if (it.kind === 'desk') this.drawDesk(eng, ctx, it.x, it.y, props);
+      else this.drawAgent(eng, ctx, it.a);
+    }
 
     // dust motes in the light
     const now = performance.now() / 1000;
@@ -624,31 +637,51 @@ const OfficeRenderer = {
 
   /* themed character sprite (AI-generated art) */
   drawSpriteAgent(eng, ctx, a, c, u, img) {
+    const now = performance.now() / 1000;
     const bob = a.moving ? Math.sin(a.walkPhase) * 1.5 * u : Math.sin(a.walkPhase * 0.55) * 0.8 * u;
-    const w = 96 * u, hh = 96 * u;
-    // grounding shadow
-    const sh = ctx.createRadialGradient(c.x, c.y + u * 3, u * 2, c.x, c.y + u * 3, u * 15);
+    // HUMAN PROPORTION: sprite ≈ 25u ≈ 1.3 desk-widths (desk isoBox ≈ 0.84 cells).
+    // Seated "working at the desk" pose: slightly smaller + typing indicator.
+    const atDesk = a.home && Math.hypot(a.x - a.home.x, a.y - a.home.y) < 0.4 && !a.moving;
+    const working = atDesk && (a.status === 'tool' || a.status === 'thinking' || a.status === 'working');
+    const pose = working ? 0.8 : 1;
+    const w = 25 * u * pose, hh = 25 * u * pose;
+    // grounding shadow — scales with the sprite (soft contact shadow)
+    const sh = ctx.createRadialGradient(c.x, c.y + u * 3, u * 1.5, c.x, c.y + u * 3, u * 11);
     sh.addColorStop(0, 'rgba(60,45,25,0.35)');
+    sh.addColorStop(0.4, 'rgba(60,45,25,0.16)');
     sh.addColorStop(1, 'rgba(60,45,25,0)');
     ctx.fillStyle = sh;
     ctx.beginPath();
-    ctx.ellipse(c.x, c.y + u * 3, u * 15, u * 5, 0, 0, Math.PI * 2);
+    ctx.ellipse(c.x, c.y + u * 3, u * 11, u * 3.8, 0, 0, Math.PI * 2);
     ctx.fill();
     // draw sprite with slight bob + squash on walk (true transparency, no circle)
     const sq = a.moving ? 0.06 : 0;
     ctx.save();
-    ctx.translate(c.x, c.y - hh / 2 + bob + u * 6);
+    ctx.translate(c.x, c.y - hh / 2 + bob + u * 4.2);
     ctx.scale(1 + sq, 1 - sq);
     ctx.drawImage(img, -w / 2, -hh / 2, w, hh);
     ctx.restore();
+    // typing indicator while working at the desk (3 pulsing dots above the head)
+    if (working) {
+      const ty = c.y - hh - u * 3.2;
+      ctx.fillStyle = 'rgba(59,54,48,0.9)';
+      for (let i = 0; i < 3; i++) {
+        const pulse = 0.55 + 0.45 * Math.sin(now * 5 + i * 1.2);
+        ctx.globalAlpha = pulse;
+        ctx.beginPath();
+        ctx.arc(c.x - u * 3 + i * u * 3, ty, u * 1.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
     // halo behind on dark themes
     if (eng.theme && eng.theme.fx && eng.theme.fx.dark) {
-      const halo = ctx.createRadialGradient(c.x, c.y - u * 8, u * 2, c.x, c.y - u * 8, u * 22);
-      halo.addColorStop(0, 'rgba(255,236,190,0.35)');
+      const halo = ctx.createRadialGradient(c.x, c.y - u * 6, u * 2, c.x, c.y - u * 6, u * 18);
+      halo.addColorStop(0, 'rgba(255,236,190,0.30)');
       halo.addColorStop(1, 'rgba(255,236,190,0)');
       ctx.fillStyle = halo;
       ctx.beginPath();
-      ctx.ellipse(c.x, c.y - u * 8, u * 22, u * 20, 0, 0, Math.PI * 2);
+      ctx.ellipse(c.x, c.y - u * 6, u * 18, u * 16, 0, 0, Math.PI * 2);
       ctx.fill();
     }
   },
@@ -1085,14 +1118,44 @@ const OfficeRenderer = {
     this._blurBottom = bot;
   },
 
+  /* truncate bubble text so it never spills out of the bubble rect */
+  fitText(ctx, text, maxW) {
+    let t = String(text || '');
+    if (ctx.measureText(t).width <= maxW) return t;
+    while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+    return t + '…';
+  },
+
   drawLabels(eng, ctx) {
     const now = performance.now() / 1000;
-    // speech bubbles (top-most)
-    for (const a of eng.agents.values()) {
-      if (a.bubble.text && now < a.bubble.until) {
-        const c = this.map(eng, a.x, a.y);
-        this.drawBubble(eng, ctx, a, c.x, c.y - eng.s(46));
+    // speech bubbles (top-most) — collision-resolved: newer bubbles win, older
+    // overlapping ones stack upward, and anything above the header is dropped.
+    const active = [...eng.agents.values()]
+      .filter(a => a.bubble.text && now < a.bubble.until)
+      .sort((x, y) => y.bubble.until - x.bubble.until);
+    const used = [];
+    const s = eng.scale;
+    for (const a of active) {
+      const c = this.map(eng, a.x, a.y);
+      ctx.font = `600 ${11 * s}px ${monoFont()}`;
+      const iw = a.bubble.icon ? 16 * s + 5 * s : 0;
+      const maxW = 150 * s - iw - 18 * s;
+      const text = this.fitText(ctx, a.bubble.text, maxW);
+      const tw = ctx.measureText(text).width;
+      const w = Math.min(tw + iw + 18 * s, 150 * s);
+      const h = 22 * s;
+      let bx = clamp(c.x - w / 2, 4 * s, eng.cssW - w - 4 * s);
+      let by = c.y - eng.s(46) - h - 6 * s;
+      for (let tries = 0; tries < 6; tries++) {
+        const clash = used.some(r =>
+          bx < r.x + r.w + 6 * s && bx + w + 6 * s > r.x &&
+          by < r.y + r.h + 6 * s && by + h + 6 * s > r.y);
+        if (!clash) break;
+        by -= h + 8 * s;              // stack upward
       }
+      if (by < 8 * s) continue;        // clipped by the header — newer bubble wins
+      used.push({ x: bx, y: by, w, h });
+      this.drawBubble(eng, ctx, a, bx, by, w, h, text);
     }
     // hover name tags
     ctx.font = `700 ${eng.s(10.5)}px ${monoFont()}`;
@@ -1103,26 +1166,20 @@ const OfficeRenderer = {
         const c = this.map(eng, a.x, a.y);
         const tw = ctx.measureText(a.name).width;
         ctx.fillStyle = 'rgba(30,25,40,0.85)';
-        eng.roundRectPath(ctx, c.x - tw / 2 - eng.s(6), c.y - eng.s(46), tw + eng.s(12), eng.s(16), eng.s(8));
+        eng.roundRectPath(ctx, c.x - tw / 2 - eng.s(6), c.y - eng.s(40), tw + eng.s(12), eng.s(16), eng.s(8));
         ctx.fill();
         ctx.fillStyle = '#f7f3ea';
-        ctx.fillText(a.name, c.x, c.y - eng.s(34));
+        ctx.fillText(a.name, c.x, c.y - eng.s(28));
       }
     }
     ctx.textAlign = 'left';
   },
 
-  drawBubble(eng, ctx, a, x, y) {
+  drawBubble(eng, ctx, a, bx, by, w, h, text) {
     const s = eng.scale;
-    const text = a.bubble.text;
     const icon = a.bubble.icon;
-    ctx.font = `600 ${11 * s}px ${monoFont()}`;
-    const tw = ctx.measureText(text).width;
-    const iw = icon ? 16 * s + 5 * s : 0;
-    const w = Math.min(tw + iw + 18 * s, 150 * s);
-    const h = 22 * s;
-    const bx = clamp(x - w / 2, 4 * s, eng.cssW - w - 4 * s);
-    const by = y - h - 6 * s;
+    if (!text) text = a.bubble.text;
+    const x = bx + w / 2, y = by + h + 6 * s;
     ctx.fillStyle = 'rgba(255,253,246,0.95)';
     ctx.strokeStyle = 'rgba(200,185,150,0.8)';
     ctx.lineWidth = 1.2 * s;
@@ -1143,7 +1200,7 @@ const OfficeRenderer = {
     }
     ctx.font = `600 ${11 * s}px ${monoFont()}`;
     ctx.textAlign = 'center';
-    ctx.fillText(text, bx + w / 2 + iw / 2, by + h / 2 + 4 * s);
+    ctx.fillText(text, bx + w / 2 + (icon ? 16 * s + 5 * s : 0) / 2, by + h / 2 + 4 * s);
     ctx.textAlign = 'left';
   },
 
@@ -1191,18 +1248,14 @@ const OfficeRenderer = {
     g.fillStyle = 'rgba(0,0,0,0.06)';
     eng.ellipseIso(x, y, 0.75, 0.42, g.fillStyle);
     this.isoBox(eng, g, x - 0.42, y - 0.26, x + 0.42, y + 0.26, 14, p.woodTop, p.wood, p.woodDark);
-    this.drawMonitor(eng, g, x - 0.05, y - 0.12, p, 20);
-    const ch = this.map(eng, x + 0.02, y + 0.4);
-    g.fillStyle = p.chair;
-    g.fillRect(ch.x - 7 * eng.scale, ch.y - 16 * eng.scale, 14 * eng.scale, 16 * eng.scale);
-    g.fillRect(ch.x - 9 * eng.scale, ch.y - 20 * eng.scale, 18 * eng.scale, 5 * eng.scale);
+    this.drawMonitor(eng, g, x - 0.05, y - 0.12, p, 14);
   },
 
   drawMonitor(eng, g, x, y, p, h) {
     const c = this.map(eng, x, y);
     g.fillStyle = p.monitor;
     g.fillRect(c.x - 10 * eng.scale, c.y - h * eng.scale - 4 * eng.scale, 20 * eng.scale, 14 * eng.scale);
-    g.fillStyle = p.screen;
+    g.fillStyle = p.screen || p.monitorScreen || '#a8cce8';
     g.fillRect(c.x - 8 * eng.scale, c.y - h * eng.scale - 2 * eng.scale, 16 * eng.scale, 10 * eng.scale);
     g.fillStyle = p.monitor;
     g.fillRect(c.x - 2 * eng.scale, c.y - 4 * eng.scale, 4 * eng.scale, 4 * eng.scale);
