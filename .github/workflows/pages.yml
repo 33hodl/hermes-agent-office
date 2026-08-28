@@ -19,7 +19,7 @@ jobs:
         run: |
           mkdir -p _site
           cp -r web/* _site/
-          cp docs/screenshots/montage.png _site/preview.png
+          cp docs/screenshots/montage-v3.png _site/preview.png
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

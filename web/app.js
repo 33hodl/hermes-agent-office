@@ -331,7 +331,18 @@ function handleEvent(ev) {
 }
 
 function agentFromStore(ev) {
-  const name = ev.agent || 'Agent';
+  let name = ev.agent || 'Agent';
+  // THEME-CAST GUARD: an entering agent must match the active theme's cast.
+  // The demo feed / server can still carry a previous theme's name (race after
+  // a theme switch) — force the next cast name so a Batman office can never
+  // show a stray "Uma".
+  const cast = (window.__activeTheme && window.__activeTheme.agentNames) || null;
+  if (cast && cast.length) {
+    if (!cast.includes(name)) {
+      const idx = (window.__castCounter = (window.__castCounter || 0) + 1) - 1;
+      name = cast[idx % cast.length];
+    }
+  }
   const look = (eng.theme && eng.theme.franchiseId)
     ? castLook(name, eng.theme.franchiseId)
     : officeCastLook(name);
@@ -801,6 +812,7 @@ function applyTheme(name) {
     renderRoster();
   }
   relookAgents(); // applies cast looks + dark-theme hue lift AFTER the rename
+  window.__castCounter = 0; // fresh cycle for agents entering under this theme
   eng.rehome();   // reassign desks from the new theme so agents never cluster
   localStorage.setItem('office-theme', name);
   $('brand-mark').textContent = theme.brand || '🏢';

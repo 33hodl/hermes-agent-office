@@ -24,24 +24,24 @@ installable as a PWA.
 
 **🏢 Office** — the cozy isometric pastel diorama that started the trend.
 
-![Office theme](docs/screenshots/office-v5.png)
+![Office theme](docs/screenshots/office-v6.png)
 
 **◈ Nous** — a holographic data plane: neon grid, glowing orbs, a cinematic server-room backdrop.
 
-![Nous theme](docs/screenshots/nous-v5.png)
+![Nous theme](docs/screenshots/nous-v6.png)
 
 **📎 Dunder Mifflin** — flat 2D cartoon sitcom set straight out of Scranton.
 
-![Dunder Mifflin theme](docs/screenshots/dunder-v5.png)
+![Dunder Mifflin theme](docs/screenshots/dunder-v6.png)
 
 **🦇 Batman** — a Gotham rooftop with the bat-signal; Batman, Robin,
 Catwoman and Joker work the bullpen.
 
-![Batman theme](docs/screenshots/batman-v5.png)
+![Batman theme](docs/screenshots/batman-v6.png)
 
 **🚀 Star Wars** — a starship hangar with Luke, Leia, Han and Chewbacca on shift.
 
-![Star Wars theme](docs/screenshots/starwars-v5.png)
+![Star Wars theme](docs/screenshots/starwars-v6.png)
 
 > Every agent is a **distinct character** — body type, head silhouette, and one
 > accessory each (cowl, cape, lightsaber, mug, playing card…). Identity colors
@@ -76,7 +76,7 @@ you tweak colors, effects and names. Export/import your offices as JSON.
 - **Visiting**: run a second instance pointed at a friend's office and their
   agents wander in as guests
 
-![demo](docs/screenshots/demo-v3.gif)
+![demo](docs/screenshots/demo-v4.gif)
 
 ## 📦 Install for Hermes users
 
