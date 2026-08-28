@@ -1,4 +1,4 @@
-const CACHE = 'office-v4';
+const CACHE = 'office-v5';
 const FILES = ['./', './index.html', './style.css', './engine.js', './app.js',
   './office-renderer.js', './nous-renderer.js', './dunder-renderer.js',
   './custom.js', './creator.js', './creator-html.js', './icon.svg', './manifest.json'];
@@ -15,8 +15,11 @@ self.addEventListener('fetch', (e) => {
   if (url.pathname.startsWith('/api/')) return;
   // strip cache-busting query for cache lookups
   const cleanUrl = url.origin + url.pathname;
+  // NETWORK-FIRST, and NEVER serve from the browser's HTTP cache — the stale
+  // `?v=` URLs in an old index.html must not return a stale cached JS. Force a
+  // real network round-trip, fall back to the SW cache only when offline.
   e.respondWith(
-    fetch(e.request).then((r) => {
+    fetch(e.request, { cache: 'no-store' }).then((r) => {
       if (r.ok) {
         const copy = r.clone();
         caches.open(CACHE).then((c) => c.put(cleanUrl, copy));
