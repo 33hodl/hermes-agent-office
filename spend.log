@@ -27,3 +27,13 @@ ESTIMATED TOTAL: ~$0.32 / $50.00 (4 backdrop generations @ ~$0.08)
 # Note: exact billing lives in the Nous Portal dashboard;
 # this is a conservative reconstruction from call history.
 # ============================================================
+
+# ============================================================
+# 2026-08-28  visual overhaul session (this session)
+# ~14 vision QA reviews (aux vision model)                  = ~$0.80 est
+# 0 image generations, 0 Monid calls
+# ------------------------------------------------------------
+# ESTIMATED SESSION TOTAL: ~$0.80
+# CUMULATIVE ESTIMATE: ~$5.80 / $50.00  (remaining ~$44)
+# Note: exact billing lives in the Nous Portal dashboard.
+# ============================================================
