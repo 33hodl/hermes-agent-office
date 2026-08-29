@@ -369,6 +369,13 @@ body[data-theme="office"] .brand-name { font-weight: 800; }
 
 /* topbar right cluster */
 .topbar-right { display: flex; align-items: center; gap: 8px; }
+.mute-btn {
+  background: transparent; border: 0; cursor: pointer;
+  font-size: 15px; line-height: 1; padding: 6px 7px; border-radius: 8px;
+  color: var(--text); min-width: 28px; min-height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background .15s ease;
+}
 .mute-btn:hover { color: var(--text); background: var(--accent-soft); }
 
 /* welcome overlay */

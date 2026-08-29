@@ -210,6 +210,64 @@ function colorFor(name, theme) {
 
 /* ============================== app state ============================== */
 
+/* ---- synthesized sound effects (botvillage playbook: tiny WebAudio blips,
+        no audio files). Sound starts on the first click/tap, M or the
+        speaker button toggles it. ---- */
+const sfx = {
+  ctx: null, master: null, enabled: false,
+  init() {
+    if (this.ctx) return;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0.14;
+      this.master.connect(this.ctx.destination);
+    } catch (e) { /* no audio available — silent */ }
+  },
+  _tone(freq, dur, type, vol, delay, glide) {
+    if (!this.ctx || !this.enabled) return;
+    const t0 = this.ctx.currentTime + (delay || 0);
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(freq, t0);
+    if (glide) o.frequency.exponentialRampToValueAtTime(glide, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol || 0.5, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(this.master);
+    o.start(t0); o.stop(t0 + dur + 0.03);
+  },
+  enter()   { this._tone(523, .11, 'sine', .45); this._tone(784, .13, 'sine', .35, .07); },
+  think()   { this._tone(440, .08, 'triangle', .3); },
+  tool()    { this._tone(660, .05, 'square', .14); this._tone(990, .06, 'square', .09, .045); },
+  deliver() { this._tone(880, .15, 'sine', .45); this._tone(1174, .2, 'sine', .35, .09); },
+  toggle() {
+    this.enabled = !this.enabled;
+    this._sync();
+    return this.enabled;
+  },
+  _sync() {
+    const b = document.getElementById('mute-btn');
+    if (b) {
+      b.textContent = this.enabled ? '🔊' : '🔇';
+      b.setAttribute('aria-pressed', String(this.enabled));
+      b.title = this.enabled ? 'Mute sound (M)' : 'Enable sound (M)';
+    }
+  },
+};
+// sound starts on the first user gesture (browser autoplay policy)
+function primeAudio() {
+  sfx.init();
+  if (!sfx.enabled) { sfx.enabled = true; sfx._sync(); }
+  document.removeEventListener('pointerdown', primeAudio);
+  document.removeEventListener('keydown', primeAudio);
+}
+document.addEventListener('pointerdown', primeAudio);
+document.addEventListener('keydown', primeAudio);
+
 const store = {
   agents: new Map(),
   deliveries: [],
@@ -265,6 +323,7 @@ function handleEvent(ev) {
   switch (ev.type) {
     case 'agent_enter':
       eng.bubble(a, flavorFor(a.name) || 'Arrived', null, 3.5);
+      sfx.enter();
       break;
     case 'agent_leave':
       if (a) {
@@ -278,6 +337,7 @@ function handleEvent(ev) {
       a.currentTool = null;
       eng.goTo(a, a.home.x, a.home.y);
       eng.bubble(a, short(ev.text || 'Thinking…'), null, 4);
+      sfx.think();
       break;
     }
     case 'tool_call': {
@@ -294,6 +354,7 @@ function handleEvent(ev) {
         eng.goTo(a, a.home.x, a.home.y);
       }
       eng.bubble(a, toolLabel(a.currentTool), toolIcon(a.currentTool), 4);
+      sfx.tool();
       break;
     }
     case 'status': {
@@ -313,6 +374,7 @@ function handleEvent(ev) {
         eng.goTo(a, mail.x - 0.45 + (a.slot % 2) * 0.9, mail.y - 0.5);
         a.pendingDelivery = ev;
       }
+      sfx.deliver();
       break;
     }
     case 'idle': {
@@ -676,7 +738,11 @@ function wireShortcuts() {
       case '1': applyTheme('office'); break;
       case '2': applyTheme('nous'); break;
       case '3': applyTheme('dunder'); break;
-      case 'm': case 'M':  break;
+      case 'm': case 'M':
+        e.preventDefault();
+        sfx.init();
+        sfx.toggle();
+        break;
       case 'g': case 'G': openMailbox(); break;
       case 't': case 'T':
         e.preventDefault();
@@ -913,6 +979,8 @@ function boot() {
   });
 
   $('mailbox-btn').addEventListener('click', openMailbox);
+  const mb = $('mute-btn');
+  if (mb) mb.addEventListener('click', () => { sfx.init(); sfx.toggle(); });
   // first-run welcome + sample task
   const welcome = document.getElementById('welcome');
   if (welcome && !localStorage.getItem('office-welcome-seen')) {

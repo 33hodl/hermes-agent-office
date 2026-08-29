@@ -233,7 +233,7 @@ class HermesDBSource:
             snippet = (content or "").strip().replace("\n", " ")[:110]
             self._emit(type="status", agent=name, session=session_id,
                        role=role_label,
-                       text=f"Got results from {tool_name or 'tool'}"
+                       text=f"Reviewing {tool_name or 'tool'} output"
                             + (f": {snippet}" if snippet else ""))
 
         # assistant final text = the deliverable

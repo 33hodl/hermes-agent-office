@@ -156,7 +156,7 @@ class DemoSource:
         self._emit(type="tool_call", agent=name, session=st["session"], role=st["role"],
                    tool="web_search", task=task, tokens=self._tokens(900, 220))
         self._emit(type="status", agent=name, session=st["session"], role=st["role"],
-                   text="Got results from web_search — narrowing down the best option", task=task,
+                   text="Comparing the top picks", task=task,
                    tokens=self._tokens(500, 180))
         self._emit(type="tool_call", agent=name, session=st["session"], role=st["role"],
                    tool="web_extract", task=task, tokens=self._tokens(1200, 260))
@@ -236,7 +236,7 @@ class DemoSource:
                 time.sleep(self.interval * self._rng.randint(3, 8))
                 if self._rng.random() < 0.5:
                     self._emit(type="status", agent=name, session=st["session"],
-                               text=f"Got results from {tool} — working through them",
+                               text=f"Reviewing {tool} output",
                                task=task)
                     time.sleep(self.interval * self._rng.randint(2, 5))
 

@@ -213,6 +213,28 @@ const OfficeRenderer = {
       g.strokeStyle = eng.theme.wall.frame; g.lineWidth = eng.s(2);
       g.strokeRect(f.x - eng.s(15), f.y - eng.s(54), eng.s(30), eng.s(36));
     }
+
+    // wall clock (cozy detail): white face, dark rim, hands
+    if (!customBg) {
+      const cl = this.map(eng, 4.7, 0);
+      const cr = eng.s(15), cy = cl.y - eng.s(47);
+      g.fillStyle = 'rgba(30,28,36,0.85)';
+      g.beginPath(); g.arc(cl.x, cy, cr + eng.s(2.4), 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#f7f3e8';
+      g.beginPath(); g.arc(cl.x, cy, cr, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#3a3428'; g.lineWidth = eng.s(1.4);
+      for (let t = 0; t < 12; t++) {
+        const a0 = (t / 12) * Math.PI * 2;
+        const x1 = cl.x + Math.cos(a0) * cr * 0.82, y1 = cy + Math.sin(a0) * cr * 0.82;
+        const x2 = cl.x + Math.cos(a0) * cr * 0.92, y2 = cy + Math.sin(a0) * cr * 0.92;
+        g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+      }
+      const ha = -Math.PI / 2 + 0.9, ma = -Math.PI / 2 + 2.1;
+      g.strokeStyle = '#3a3428'; g.lineWidth = eng.s(1.8); g.lineCap = 'round';
+      g.beginPath(); g.moveTo(cl.x, cy); g.lineTo(cl.x + Math.cos(ha) * cr * 0.5, cy + Math.sin(ha) * cr * 0.5); g.stroke();
+      g.lineWidth = eng.s(1.2);
+      g.beginPath(); g.moveTo(cl.x, cy); g.lineTo(cl.x + Math.cos(ma) * cr * 0.72, cy + Math.sin(ma) * cr * 0.72); g.stroke();
+    }
     // whiteboard
     const wb = this.map(eng, 3.4, 0);
     g.fillStyle = p.whiteboard;

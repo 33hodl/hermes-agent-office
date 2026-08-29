@@ -20,7 +20,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hermes Agent Office</title>
-<link rel="stylesheet" href="style.css?v=1787962472">
+<link rel="stylesheet" href="style.css?v=1787974600">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Hermes Agent Office — watch your agents work">
 <meta property="og:description" content="Your Hermes agents get an office: 3 art styles, custom offices from any movie or show, real-time work, deliveries in your mailbox. Open source, zero dependencies.">
@@ -49,7 +49,7 @@
       <button id="task-send" title="Assign task (Enter)">➤</button>
     </div>
     <div class="topbar-right">
-
+      <button id="mute-btn" class="mute-btn" title="Enable sound (M)" aria-pressed="false">🔇</button>
       <nav class="theme-switcher" id="theme-switcher" title="Pick an office">
       <button data-theme-name="office" class="theme-btn active">Office</button>
       <button data-theme-name="nous" class="theme-btn">Nous</button>
@@ -188,15 +188,15 @@
     </div>
   </div>
 
-  <script src="custom.js?v=1787962472"></script>
-  <script src="creator-html.js?v=1787962472"></script>
-  <script src="engine.js?v=1787962472"></script>
-  <script src="office-renderer.js?v=1787962472"></script>
-  <script src="nous-renderer.js?v=1787962472"></script>
-  <script src="dunder-renderer.js?v=1787962472"></script>
-  <script src="creator.js?v=1787962472"></script>
-  <script src="demo-feed.js?v=1787962472"></script>
-  <script src="app.js?v=1787962472"></script>
+  <script src="custom.js?v=1787974600"></script>
+  <script src="creator-html.js?v=1787974600"></script>
+  <script src="engine.js?v=1787974600"></script>
+  <script src="office-renderer.js?v=1787974600"></script>
+  <script src="nous-renderer.js?v=1787974600"></script>
+  <script src="dunder-renderer.js?v=1787974600"></script>
+  <script src="creator.js?v=1787974600"></script>
+  <script src="demo-feed.js?v=1787974600"></script>
+  <script src="app.js?v=1787974600"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {}));
