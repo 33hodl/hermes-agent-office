@@ -1,4 +1,4 @@
-const CACHE = 'office-v8';
+const CACHE = 'office-v9';
 const FILES = ['./', './index.html', './style.css', './engine.js', './app.js',
   './office-renderer.js', './nous-renderer.js', './dunder-renderer.js',
   './custom.js', './creator.js', './creator-html.js', './icon.svg', './manifest.json'];
