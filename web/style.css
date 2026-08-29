@@ -510,6 +510,13 @@ body[data-theme="office"] .brand-name { font-weight: 800; }
   .tour-card { width: calc(100vw - 32px); bottom: 16px; }
   /* bottom action buttons stay reachable */
   .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 20; }
+  /* compact corner buttons so they stop covering the office floor/mailbox */
+  #creator-btn-wrap { left: 10px; bottom: 10px; }
+  .mailbox-btn { right: 10px; bottom: 10px; padding: 8px 13px; font-size: 12px; }
+  .creator-btn { padding: 8px 13px; font-size: 12px; }
+  .mailbox-icon { font-size: 15px; }
+  /* task input placeholder must not overflow the phone screen */
+  .topbar-task input { text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
 }
 
 .offline-banner {

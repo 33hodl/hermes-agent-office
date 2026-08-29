@@ -58,8 +58,15 @@ const OfficeRenderer = {
 
   resize(eng) {
     const fit = Math.min(eng.cssW / 560, eng.cssH / 330);
-    // mobile: much bigger scene so agents are prominent and the room fills the screen
-    const mfit = eng.cssW < 860 ? Math.min(eng.cssW / 250, eng.cssH / 470) : fit;
+    // mobile: fit the OFFICE on screen. The iso room diamond spans
+    // ±(GRID*TILE/2)*scale = ±320*scale, but the desks/stations (the content)
+    // live within cells 0..8 → ±256*scale. Scale so the desk area fits with
+    // ~20px margins; the outer floor corners may kiss the edges, furniture
+    // never clips. (Old cssW/250 zoomed in so far the left half of the office
+    // was permanently off-screen — the #1 phone complaint.)
+    const mfit = eng.cssW < 860
+      ? Math.min((eng.cssW - 40) / (8 * TILE), eng.cssH / 470)
+      : fit;
     eng.scale = clamp(mfit, 0.45, 1.7) * (eng.zoom || 1);
     eng.ox = eng.cssW / 2;
     // center the ROOM vertically (grid center (5,5) maps to oy + 10*TILE/4*scale),
@@ -1206,13 +1213,16 @@ const OfficeRenderer = {
     let rank = 0;
     for (const a of active) {
       const c = this.map(eng, a.x, a.y);
-      ctx.font = `600 ${11 * s}px ${monoFont()}`;
+      ctx.font = `600 ${Math.max(11 * s, 9.5)}px ${monoFont()}`;
       const iw = a.bubble.icon ? 16 * s + 5 * s : 0;
-      const maxW = 172 * s - iw - 18 * s;
+      // cap bubble width to the viewport on phones (172*s = ~240px on a 390px
+      // screen — that swallowed half the office; never exceed ~55% of cssW)
+      const wMax = Math.min(172 * s, eng.cssW * 0.55);
+      const maxW = wMax - iw - 18 * s;
       const lines = this.wrapText(ctx, a.bubble.text, maxW, 2);
       let tw = 0;
       for (const ln of lines) tw = Math.max(tw, ctx.measureText(ln).width);
-      const w = Math.min(tw + iw + 18 * s, 172 * s);
+      const w = Math.min(tw + iw + 18 * s, wMax);
       const h = (lines.length > 1 ? 34 : 22) * s;
       let bx = clamp(c.x - w / 2, 4 * s, eng.cssW - w - 4 * s);
       let by = c.y - eng.s(46) - h - 6 * s;
