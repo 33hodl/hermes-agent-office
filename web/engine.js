@@ -120,6 +120,8 @@ class OfficeEngine {
 
   setTheme(theme) {
     this.theme = theme;
+    this._deskCounter = 0;   // fresh desk assignment on theme switch — otherwise
+                             // agents land on already-occupied desks (duplicates)
     this.resize();
   }
 
@@ -206,13 +208,20 @@ class OfficeEngine {
       ? this.theme.desks
       : (this.theme.stations || []).filter(s => s.type === 'desk').map(s => [s.x, s.y]);
     const deskIdx = this._deskCounter++ % Math.max(desks.length, 1);
-    const [hx, hy] = desks.length ? desks[deskIdx] : [ent.x, ent.y];
-    // office renderer: agent sits BEHIND the desk (up-left) so the desk occludes
-    // the lower body — reads as "working at a workstation". dunder renderer: the
-    // photo IS the furniture; stand just in front of the assigned spot instead.
+    // never assign a desk already occupied by a live agent (theme-switch races)
     const behindDesk = !!(this.renderer && (this.renderer.name === 'office' || this.renderer.name === 'voxel'));
-    // dunder: the photo IS the furniture — stand ON the assigned spot
-    const home = behindDesk ? { x: hx - 0.3, y: hy - 0.3 } : { x: hx, y: hy };
+    let taken = new Set([...this.agents.values()].map(ag => ag.home ? ag.home.x + ',' + ag.home.y : null).filter(Boolean));
+    let hx2, hy2;
+    for (let tries = 0; tries < desks.length; tries++) {
+      const [dx, dy] = desks.length ? desks[(deskIdx + tries) % desks.length] : [ent.x, ent.y];
+      const hh = behindDesk ? { x: dx - 0.3, y: dy - 0.3 } : { x: dx, y: dy };
+      if (!taken.has(hh.x + ',' + hh.y)) { hx2 = hh.x; hy2 = hh.y; break; }
+    }
+    const [hx, hy] = (hx2 !== undefined) ? [hx2, hy2] : [ent.x, ent.y];
+    // office/voxel renderer: agent sits BEHIND the desk (up-left) so the desk
+    // occludes the lower body — reads as "working at a workstation". dunder
+    // renderer: the photo IS the furniture; stand ON the assigned spot.
+    const home = { x: hx, y: hy };
     const ca = {
       ...a,
       x: ent.x + (deskIdx % 3) * 0.7, y: ent.y + (deskIdx % 2) * 0.5,
