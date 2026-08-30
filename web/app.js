@@ -466,7 +466,8 @@ function startOfflineDemo() {
   banner.querySelector('.banner-x').addEventListener('click', () => banner.remove());
   document.body.appendChild(banner);
   // keep the roster within the theme's cast: when a new wave spawns beyond the
-  // cap, retire the oldest agent so desks never double-book
+  // cap, retire the oldest agent so desks never double-book (any status —
+  // idle-only eviction let duplicates in during theme switches)
   const capped = (ev) => {
     if (ev.type === 'agent_enter') {
       const capN = (window.__activeTheme && window.__activeTheme.agentNames)
@@ -475,7 +476,7 @@ function startOfflineDemo() {
       while (ids.length >= capN) {
         const old = ids.shift();
         const a = eng.agents.get(old);
-        if (a && a.status === 'idle' && !a.leaving) { eng.removeAgent(old); break; }
+        if (a && !a.leaving) { eng.removeAgent(old); break; }
       }
     }
     handleEvent(ev);

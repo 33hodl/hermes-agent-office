@@ -35,6 +35,9 @@ function startClientDemo(handleEvent, onStatus) {
 
   let i = 0;
   const spawn = (name) => {
+    // never spawn a name already in the office (theme-switch + wave races
+    // caused duplicate characters on the roster)
+    if (window.__eng && [...window.__eng.agents.values()].some(a => a.name === name)) return;
     const task = tasks[i % tasks.length];
     i += 1;
     ev('agent_enter', name, { task });
