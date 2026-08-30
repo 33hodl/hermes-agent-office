@@ -210,7 +210,7 @@ class OfficeEngine {
     // office renderer: agent sits BEHIND the desk (up-left) so the desk occludes
     // the lower body — reads as "working at a workstation". dunder renderer: the
     // photo IS the furniture; stand just in front of the assigned spot instead.
-    const behindDesk = !!(this.renderer && this.renderer.name === 'office');
+    const behindDesk = !!(this.renderer && (this.renderer.name === 'office' || this.renderer.name === 'voxel'));
     // dunder: the photo IS the furniture — stand ON the assigned spot
     const home = behindDesk ? { x: hx - 0.3, y: hy - 0.3 } : { x: hx, y: hy };
     const ca = {
@@ -256,7 +256,7 @@ class OfficeEngine {
       ? this.theme.desks
       : (this.theme.stations || []).filter(s => s.type === 'desk').map(s => [s.x, s.y]);
     if (!desks.length) return;
-    const behindDesk = !!(this.renderer && this.renderer.name === 'office');
+    const behindDesk = !!(this.renderer && (this.renderer.name === 'office' || this.renderer.name === 'voxel'));
     let i = 0;
     for (const a of this.agents.values()) {
       const [hx, hy] = desks[i++ % desks.length];

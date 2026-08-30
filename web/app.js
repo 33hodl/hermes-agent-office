@@ -124,7 +124,7 @@ const THEMES = {
     ],
   },
   starwars: {
-    name: 'starwars', brand: '🚀', renderer: 'office', franchiseId: 'starwars', windowArt: 'assets/starwars-window.png', 
+    name: 'starwars', brand: '🚀', renderer: 'voxel', franchiseId: 'starwars', windowArt: 'assets/starwars-window.png', 
     agentNames: ['Luke', 'Leia', 'Han', 'Chewbacca', 'R2-D2', 'C-3PO', 'Obi-Wan', 'Yoda'],
     ui: { accent: '#e8c04a' },
     backdrop: 'assets/starwars-backdrop.png',
@@ -154,7 +154,7 @@ const THEMES = {
   },
 };
 
-const RENDERERS = { office: OfficeRenderer, nous: NousRenderer, dunder: DunderRenderer };
+const RENDERERS = { office: OfficeRenderer, nous: NousRenderer, dunder: DunderRenderer, voxel: VoxelRenderer };
 const CUSTOM_THEMES = {};   // id -> custom theme config
 let activeCustomTheme = null;
 
