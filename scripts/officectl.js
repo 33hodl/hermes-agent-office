@@ -224,7 +224,10 @@ const ENGINE_STATE = () => {
   };
 };
 
-async function settle(page, { timeoutMs, force = false, minAgents = 6 }) {
+async function settle(page, { timeoutMs, force = false, minAgents = 1 }) {
+  // settled = nobody is walking and at least one agent exists. Population is a
+  // SEPARATE concern (verify fails on an empty office, warns on a quiet one) —
+  // folding it in here made `settle` report settled=false with everyone seated.
   const deadline = Date.now() + timeoutMs;
   let st = await page.evaluate(ENGINE_STATE);
   while (Date.now() < deadline) {
@@ -432,6 +435,12 @@ function outPath(opts, fallback) {
   return p;
 }
 
+/** Repo-relative when it reads well, absolute otherwise (never "../../../tmp"). */
+function displayPath(p) {
+  const rel = path.relative(ROOT, p);
+  return rel.startsWith('..') ? p : rel;
+}
+
 async function cmdShot(opts) {
   const dest = outPath(opts, `docs/screenshots/officectl-${new Date().toISOString().slice(0, 10)}.png`);
   if (opts.dryRun) return emit(opts, () => ok(`would write ${dest}`), { dryRun: true, out: dest });
@@ -445,7 +454,7 @@ async function cmdShot(opts) {
       await settle(page, { timeoutMs: Number(opts.timeout || 45) * 1000, force: !!opts.forceSettle });
     }
     await page.screenshot({ path: dest });
-    emit(opts, () => ok(`wrote ${path.relative(ROOT, dest)}`), { ok: true, out: dest });
+    emit(opts, () => ok(`wrote ${displayPath(dest)}`), { ok: true, out: dest });
   });
 }
 
@@ -497,7 +506,7 @@ async function cmdGif(opts) {
   ], { encoding: 'utf8' });
   if (r.status !== 0) fail(`ffmpeg failed: ${(r.stderr || '').split('\n').slice(-3).join(' ')}`, 'retry with fewer frames (--frames 24), or use `shot` for a still');
   const size = fs.statSync(dest).size;
-  emit(opts, () => ok(`wrote ${path.relative(ROOT, dest)} (${(size / 1024).toFixed(0)} KB, ${frames} frames)`), { ok: true, out: dest, frames, bytes: size });
+  emit(opts, () => ok(`wrote ${displayPath(dest)} (${(size / 1024).toFixed(0)} KB, ${frames} frames)`), { ok: true, out: dest, frames, bytes: size });
 }
 
 /**
@@ -527,7 +536,7 @@ async function cmdVerify(opts) {
         continue;
       }
       await page.evaluate((n) => document.querySelector(`.theme-btn[data-theme-name="${n}"]`).click(), room);
-      const settledRes = await settle(page, { timeoutMs, force: !!opts.forceSettle });
+      const settledRes = await settle(page, { timeoutMs, force: !!opts.forceSettle, minAgents: 1 });
       let st = settledRes.state;
       st.settled = settledRes.settled;
       if (opts.forceSettle && st.agents.some((a) => !a.atDesk)) {
@@ -572,7 +581,7 @@ async function cmdVerify(opts) {
       if (shots) {
         const p = outPath(opts, `docs/screenshots/${room}.png`);
         await page.screenshot({ path: p });
-        entry.screenshot = path.relative(ROOT, p);
+        entry.screenshot = displayPath(p);
       }
       if (entry.failures.length) report.ok = false;
       if (entry.warnings.length) report.warnings = (report.warnings || 0) + entry.warnings.length;
