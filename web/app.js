@@ -394,6 +394,7 @@ function handleEvent(ev) {
 
 function agentFromStore(ev) {
   let name = ev.agent || 'Agent';
+  const serverName = name;
   // THEME-CAST GUARD: an entering agent must match the active theme's cast.
   // The demo feed / server can still carry a previous theme's name (race after
   // a theme switch) — force the next cast name so a Batman office can never
@@ -405,12 +406,30 @@ function agentFromStore(ev) {
       name = cast[idx % cast.length];
     }
   }
+  // UNIQUENESS GUARD: the office is a cast, not a crowd. Sprites, desks and the
+  // roster are keyed by name, so two live agents called "Uma" means one sprite,
+  // one desk claim and a roster that lies. The client is the authority here: it
+  // is the only side that knows the DISPLAYED names — after a theme switch the
+  // server's own name pool still holds the previous cast (agents are renamed in
+  // place), so it can re-issue a name the office is already showing.
+  const used = new Set([...eng.agents.values()].filter((x) => !x.leaving).map((x) => x.name));
+  if (used.has(name)) {
+    const free = cast ? cast.find((n) => !used.has(n)) : null;
+    if (free) name = free;
+    else {
+      // cast exhausted (only reachable if the roster cap let an extra agent in):
+      // keep cycling rather than inventing a name no sprite or desk can serve
+      const idx = (window.__castCounter = (window.__castCounter || 0) + 1) - 1;
+      if (cast && cast.length) name = cast[idx % cast.length];
+    }
+  }
   const look = (eng.theme && eng.theme.franchiseId)
     ? castLook(name, eng.theme.franchiseId)
     : officeCastLook(name);
   return {
     id: ev.agent_id || ev.session || ('a' + Math.random().toString(36).slice(2)),
     name,
+    serverName,
     color: look.hue || colorFor(name, eng.theme.name),
     visitor: !!ev.visitor,
     look,
@@ -655,7 +674,10 @@ function openAgentModal(id) {
   // live log: recent deliveries by this agent
   const log = $('am-log');
   if (log) {
-    const recent = store.deliveries.filter(d => d.agent === a.name).slice(0, 4);
+    // live log: recent deliveries by this agent (match the displayed name, and
+    // the server's name too — an agent admitted under a free cast name still
+    // delivers under the name the server knows it by)
+    const recent = store.deliveries.filter(d => d.agent === a.name || d.agent === a.serverName).slice(0, 4);
     log.innerHTML = recent.length
       ? recent.map(d => `<div class="log-row"><span class="log-when">${timeAgo(d.ts)}</span>${esc(short(d.title))}</div>`).join('')
       : '<div class="log-row dim">No deliveries yet — they land in the mailbox.</div>';

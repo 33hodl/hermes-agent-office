@@ -173,11 +173,36 @@ class DemoSource:
                    text="Waiting at desk for your next prompt")
 
     def _new_agent(self) -> str:
+        """Issue a name that is not already live in the office.
+
+        A duplicate display name is not cosmetic: the client keys sprites,
+        desks and the roster by name, so two live agents called "Uma" means one
+        sprite, one desk claim and a roster that lies (the same bug class fixed
+        client-side in web/demo-feed.js). Walk the pool from the cursor to the
+        first free name; when every name in the cast is live, retire the oldest
+        agent first (mirrors the roster cap in web/app.js) so the office keeps
+        rotating instead of stalling on a name that never frees.
+        """
+        pool = self._name_pool or AGENT_NAMES
+        name = None
         if self._name_pool:
-            name = self._name_pool[self._name_pool_i % len(self._name_pool)]
-            self._name_pool_i += 1
+            for step in range(len(pool)):
+                cand = pool[(self._name_pool_i + step) % len(pool)]
+                if cand not in self._agent_state:
+                    name = cand
+                    self._name_pool_i += step + 1
+                    break
         else:
-            name = self._rng.choice(AGENT_NAMES)
+            free = [n for n in AGENT_NAMES if n not in self._agent_state]
+            name = self._rng.choice(free) if free else None
+        if name is None:
+            # every name in the cast is live — retire the oldest, then reuse it
+            oldest = next(iter(self._agent_state))
+            self._emit(type="agent_leave", agent=oldest,
+                       session=self._agent_state[oldest].get("session", ""))
+            self._agent_state.pop(oldest, None)
+            name = pool[self._name_pool_i % len(pool)]
+            self._name_pool_i += 1
         role = self._rng.choice(DEMO_ROLES)
         session = f"demo-{name.lower()}-{self._rng.randint(100, 999)}"
         self._agent_state[name] = {"role": role, "session": session,

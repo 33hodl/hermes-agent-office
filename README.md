@@ -101,10 +101,30 @@ makes the office a first-class surface in the official hermes-agent repo.
 - [ ] Shared offices (multi-user rooms)
 - [ ] Official gateway plugin (Option A in INTEGRATION.md)
 
+## 🧪 Develop & verify (one CLI, not throwaway scripts)
+
+```bash
+node scripts/officectl.js up                 # start the office, wait for health
+node scripts/officectl.js verify --shots     # sweep all five rooms and assert
+node scripts/officectl.js status --json      # agents, desks, agent art, duplicates, zoom
+node scripts/officectl.js theme starwars     # switch room, wait until everyone is seated
+```
+
+`verify` exits `0` when every room passes, `1` on a regression, `2` on a usage
+problem. It asserts: at least one live agent, **one agent per name**, every
+agent's art present, everyone reaches a desk, the active room matches, zoom in
+range, and the cast matches `web/app.js`. Every command supports `--json` and
+`--dry-run`, and prints a `fix:` line when it fails.
+
+The agent-facing map of the app — one file per feature, plus the QA contract
+(`window.__eng`, `/api/*`, the art contract) — lives in
+[`skills/hermes-agent-office/references/features/`](skills/hermes-agent-office/references/features/).
+Read it before driving the UI; extend it when you add a feature.
+
 ## 🤝 Contributing
 
 PRs welcome. Keep it dependency-free, local-first, and beautiful. Run
-`pytest -q` before pushing.
+`pytest -q` and `node scripts/officectl.js verify` before pushing.
 
 ## 📜 License
 

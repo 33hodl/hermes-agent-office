@@ -45,8 +45,34 @@ python3 -m office.server --db ~/.hermes/state.db   # your real agents
   "install hermes agent office", or "watch the agents".
 - User shares the repo URL and wants it set up.
 
+## Verify your changes (the lever)
+
+Drive the app through one CLI instead of writing throwaway Playwright scripts:
+
+```bash
+node scripts/officectl.js up                  # start the office, wait for health
+node scripts/officectl.js verify --shots      # sweep every room, assert, exit 1 on regression
+node scripts/officectl.js status --json       # agents, desks, agent art, duplicates, zoom
+node scripts/officectl.js theme batman        # switch room and wait until everyone is seated
+node scripts/officectl.js shot --out docs/screenshots/x.png
+```
+
+Every command takes `--json` and `--dry-run` (on anything with a side effect)
+and prints a `fix:` line when it fails. Server-side commands (health/state/task/
+burst/features) need no browser; browser commands need Playwright (the CLI finds
+the copy that ships with Hermes, or honour `OFFICECTL_PLAYWRIGHT`).
+
+**Feature map:** `references/features/` — one file per feature (what it does, how
+to reach it, key elements, related features) plus `qa-hooks.md`, the contract the
+CLI depends on (`window.__eng`, `/api/*`, the agent-art contract). Read the map
+before driving the UI blind; extend it when you add a feature.
+
 ## Notes
 
-- Zero dependencies (Python 3.10+ stdlib only; no pip installs).
+- Zero dependencies (Python 3.10+ stdlib only; no pip installs) — including the
+  control CLI, which is Node-stdlib except for the browser commands.
 - Local-first: no telemetry, no cloud, no credentials in the repo.
 - The dashboard never writes to Hermes state — read-only SQLite access.
+- Invariants worth keeping true (asserted by `verify`, locked by `tests/`):
+  one live agent per name (the office is a cast — `tests/test_demo.py`),
+  every live agent has art (sprite or palette), everyone reaches a desk.

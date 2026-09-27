@@ -7,3 +7,6 @@ node_modules/
 *.log
 !spend.log
 docs/screenshots/*.png.tmp
+
+# officectl runtime (pidfile, server log, gif frames)
+.officectl/

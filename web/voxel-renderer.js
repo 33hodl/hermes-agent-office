@@ -10,8 +10,24 @@
 
 const V_TILE = 64;
 
+/* character palettes per cast name — module-level so QA can enumerate the cast
+   (this renderer builds figures from cubes, so palettes are its equivalent of
+   the other renderers' sprite registry; scripts/officectl.js verify asserts
+   every live agent has one) */
+const VOXEL_PALETTES = {
+  luke:     { body: '#e8dcc0', head: '#e8c8a0', leg: '#8a6a3a', arm: '#e8dcc0', h: 22, w: 0.34, acc: 'belt' },
+  leia:     { body: '#f5f5f0', head: '#c09058', leg: '#d8d2c4', arm: '#f5f5f0', h: 22, w: 0.34, acc: 'buns' },
+  han:      { body: '#d8d4c8', head: '#e8c8a0', leg: '#2e2a26', arm: '#d8d4c8', h: 23, w: 0.34, acc: 'vest' },
+  chewbacca:{ body: '#9c543c', head: '#7a422e', leg: '#5a3222', arm: '#9c543c', h: 28, w: 0.42, acc: 'band' },
+  'r2-d2':  { body: '#e8e8f0', head: '#d8d8e4', leg: '#b8b8c8', arm: '#e8e8f0', h: 16, w: 0.36, acc: 'dome' },
+  'c-3po':  { body: '#e4b43c', head: '#d8a832', leg: '#b08a24', arm: '#e4b43c', h: 24, w: 0.3, acc: 'gold' },
+  'obi-wan':{ body: '#7a5a3a', head: '#e8c8a0', leg: '#4a3a28', arm: '#7a5a3a', h: 23, w: 0.34, acc: 'robe' },
+  yoda:     { body: '#6a9a5a', head: '#8ac06a', leg: '#4a6a3a', arm: '#6a9a5a', h: 13, w: 0.34, acc: 'ears' },
+};
+const VOXEL_FALLBACK = { body: '#8fb7e8', head: '#e8c8a0', leg: '#3a3428', arm: '#8fb7e8', h: 22, w: 0.34 };
+
 class VoxelRendererImpl {
-  constructor() { this.name = 'voxel'; this.agentsV = new Map(); this._static = null; }
+  constructor() { this.name = 'voxel'; this.agentsV = new Map(); this._static = null; this.paletteNames = Object.keys(VOXEL_PALETTES); }
 
   init(eng) { /* nothing to load — all procedural */ }
 
@@ -122,17 +138,7 @@ class VoxelRendererImpl {
 
   /* character palettes per cast name */
   _pal(name) {
-    const P = {
-      luke:     { body: '#e8dcc0', head: '#e8c8a0', leg: '#8a6a3a', arm: '#e8dcc0', h: 22, w: 0.34, acc: 'belt' },
-      leia:     { body: '#f5f5f0', head: '#c09058', leg: '#d8d2c4', arm: '#f5f5f0', h: 22, w: 0.34, acc: 'buns' },
-      han:      { body: '#d8d4c8', head: '#e8c8a0', leg: '#2e2a26', arm: '#d8d4c8', h: 23, w: 0.34, acc: 'vest' },
-      chewbacca:{ body: '#9c543c', head: '#7a422e', leg: '#5a3222', arm: '#9c543c', h: 28, w: 0.42, acc: 'band' },
-      'r2-d2':  { body: '#e8e8f0', head: '#d8d8e4', leg: '#b8b8c8', arm: '#e8e8f0', h: 16, w: 0.36, acc: 'dome' },
-      'c-3po':  { body: '#e4b43c', head: '#d8a832', leg: '#b08a24', arm: '#e4b43c', h: 24, w: 0.3, acc: 'gold' },
-      'obi-wan':{ body: '#7a5a3a', head: '#e8c8a0', leg: '#4a3a28', arm: '#7a5a3a', h: 23, w: 0.34, acc: 'robe' },
-      yoda:     { body: '#6a9a5a', head: '#8ac06a', leg: '#4a6a3a', arm: '#6a9a5a', h: 13, w: 0.34, acc: 'ears' },
-    };
-    return P[(name || '').toLowerCase()] || { body: '#8fb7e8', head: '#e8c8a0', leg: '#3a3428', arm: '#8fb7e8', h: 22, w: 0.34 };
+    return VOXEL_PALETTES[(name || '').toLowerCase()] || VOXEL_FALLBACK;
   }
 
   /* voxel figure from stacked cubes */
