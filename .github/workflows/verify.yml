@@ -1,0 +1,56 @@
+name: verify
+
+# The canvas half of the test suite: pytest covers the server, this covers what
+# users actually see. Drives the real app in a real browser through
+# scripts/officectl.js verify — one agent per name, agent art present, everyone
+# reaches a desk, the active room matches, zoom in range, cast matches the room.
+# Runs on every push and PR, so the lever is a gate and not a tool someone
+# remembers to run (pstack Part 1: treat verification as infrastructure).
+
+on: [push, pull_request]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Playwright (pinned — the browser revision must match)
+        run: |
+          npm init -y >/dev/null
+          npm i --no-audit --no-fund playwright@1.62.1
+          npx playwright install --with-deps chromium
+
+      # server + verification in ONE step: a backgrounded server does not
+      # reliably outlive its step, and a dead server would fail as "the QA hook
+      # never appeared" instead of "nothing is listening"
+      - name: Verify every room (canvas invariants)
+        run: |
+          nohup python3 -m office.server --demo --port 8741 > /tmp/office.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8741/api/health >/dev/null && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8741/api/health
+          node scripts/officectl.js verify --timeout 45 --shots --json
+
+      - name: Server log
+        if: failure()
+        run: cat /tmp/office.log || true
+
+      - name: Room screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: room-screenshots
+          path: docs/screenshots/*.png
+          retention-days: 7
